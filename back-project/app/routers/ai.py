@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from app.ai.agent import runner, session_service, APP_NAME
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, get_db
 from app.models.user import User
 from google.genai import types
 from typing import List, Optional
 import uuid
+from app.services.ai_data_service import get_user_pets, PetInfo
+from sqlalchemy.orm import Session
+from app.ai.data_api import AIAgentDataAPI
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -33,13 +36,30 @@ class AssistResponse(BaseModel):
 @router.post("/assist", response_model=AssistResponse)
 async def assist(
     request: AssistRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     try:
+        # 1. Instantiate the data API
+        data_api = AIAgentDataAPI(db)
+        pets = data_api.get_user_pets(current_user.id)
+
+        # 2. Build a pet summary string
+        if pets:
+            pet_summary = "User's pets:\n" + "\n".join(
+                f"- {pet.name} ({pet.species}, {pet.breed}, age {pet.age}): {pet.notes}" for pet in pets
+            ) + "\n\n"
+        else:
+            pet_summary = "User has no pets registered.\n\n"
+
+        # 3. Enrich the prompt
+        enriched_message = pet_summary + request.message
+
         message = types.Content(
             role="user",
-            parts=[types.Part(text=request.message)]
+            parts=[types.Part(text=enriched_message)]
         )
+
         # If session_id is not provided, create a new session and use its id
         if not request.session_id:
             session = await session_service.create_session(
@@ -84,14 +104,15 @@ async def list_ai_sessions(current_user: User = Depends(get_current_user)):
             app_name=APP_NAME,
             user_id=str(current_user.id)
         )
+        session_objs = sessions.sessions
         return [
             SessionResponse(
                 id=s.id,
-                state=s.state,
-                create_time=getattr(s, 'create_time', None),
-                update_time=getattr(s, 'update_time', None),
-                event_count=len(s.events)
-            ) for s in sessions
+                state=getattr(s, 'state', None),
+                create_time=str(getattr(s, 'create_time', None)),
+                update_time=str(getattr(s, 'update_time', None)),
+                event_count=len(getattr(s, 'events', []))
+            ) for s in session_objs
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing sessions: {str(e)}")
@@ -150,4 +171,11 @@ async def clear_ai_session_messages(session_id: str, current_user: User = Depend
         )
         return {"message": "Session messages cleared successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error clearing session messages: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Error clearing session messages: {str(e)}")
+
+@router.get("/test/user-pets", response_model=List[PetInfo])
+async def test_user_pets(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return get_user_pets(db, current_user.id) 
