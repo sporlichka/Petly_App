@@ -1,5 +1,5 @@
 from google.adk.agents import Agent
-from google.adk.sessions import InMemorySessionService
+from google.adk.sessions import DatabaseSessionService
 from google.adk.runners import Runner
 from google.genai import types
 from google.generativeai import configure
@@ -15,6 +15,14 @@ if not GOOGLE_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable is not set")
 
 configure(api_key=GOOGLE_API_KEY)
+
+# Database configuration for session service
+DATABASE_URL = (
+    f"postgresql://{os.getenv('POSTGRES_USER', 'postgres')}:"
+    f"{os.getenv('POSTGRES_PASSWORD', 'postgres')}@"
+    f"{os.getenv('POSTGRES_HOST', 'localhost')}:{os.getenv('POSTGRES_PORT', '5432')}/"
+    f"{os.getenv('POSTGRES_DB', 'petcare')}"
+)
 
 # --- Agent Configuration ---
 petcare_agent = Agent(
@@ -35,13 +43,13 @@ Steps:
 
 Output Rules:
 - 3–5 bullet points
-- Mark urgent items with "URGENT:"
+- Mark urgent items with "!!!" in the end of the paragraph
 - No variables or placeholders
 """
 )
 
 APP_NAME = "petcare_assistant_app"
-session_service = InMemorySessionService()
+session_service = DatabaseSessionService(db_url=DATABASE_URL)
 runner = Runner(
     agent=petcare_agent,
     app_name=APP_NAME,
