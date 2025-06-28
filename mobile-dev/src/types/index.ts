@@ -133,6 +133,7 @@ export type HomeStackParamList = {
   PetList: undefined;
   PetDetail: { petId: number };
   AddPet: undefined;
+  ActivityWizard: { screen: keyof ActivityStackParamList; params: any };
 };
 
 export type AuthStackParamList = {

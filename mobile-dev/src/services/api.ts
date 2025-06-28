@@ -19,13 +19,6 @@ import {
 
 const API_BASE_URL = 'http://192.168.167.210:8000'; // Your backend IP address
 
-// Activity category mapping - convert from frontend uppercase to backend lowercase
-const ActivityCategoryMap = {
-  'FEEDING': 'feeding',
-  'HEALTH': 'health',
-  'ACTIVITY': 'activity',
-} as const;
-
 class ApiService {
   private async getAuthHeaders(): Promise<Record<string, string>> {
     const token = await AsyncStorage.getItem('access_token');
@@ -148,40 +141,30 @@ class ApiService {
     });
     
     if (category) {
-      // Map category to lowercase for backend if it's uppercase
-      const backendCategory = ActivityCategoryMap[category as keyof typeof ActivityCategoryMap] || category.toLowerCase();
-      params.append('category', backendCategory);
+      // Backend expects uppercase categories
+      params.append('category', category.toUpperCase());
     }
 
     const records = await this.request<ActivityRecord[]>(`/records/?${params.toString()}`);
     
-    // Map categories back to uppercase for frontend
-    return records.map(record => ({
-      ...record,
-      category: record.category.toUpperCase() as any,
-    }));
+    // Categories should already be uppercase from backend
+    return records;
   }
 
   async getActivityRecord(recordId: number): Promise<ActivityRecord> {
     const record = await this.request<ActivityRecord>(`/records/${recordId}`);
     
-    // Map category back to uppercase for frontend
-    return {
-      ...record,
-      category: record.category.toUpperCase() as any,
-    };
+    // Categories should already be uppercase from backend
+    return record;
   }
 
   async createActivityRecord(recordData: ActivityRecordCreate): Promise<ActivityRecord> {
-    // Map category to lowercase for backend
-    const backendData = {
-      ...recordData,
-      category: ActivityCategoryMap[recordData.category as keyof typeof ActivityCategoryMap] || recordData.category.toLowerCase(),
-    };
+    // Backend expects uppercase categories, so send data as-is
+    console.log('Creating activity record:', recordData);
     
     return this.request<ActivityRecord>('/records/', {
       method: 'POST',
-      body: JSON.stringify(backendData),
+      body: JSON.stringify(recordData),
     });
   }
 

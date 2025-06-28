@@ -6,6 +6,7 @@ import { Colors } from '../constants/Colors';
 import { HomeScreen } from '../screens/main/HomeScreen';
 import { PetDetailScreen } from '../screens/main/PetDetailScreen';
 import { AddPetScreen } from '../screens/main/AddPetScreen';
+import { ActivityStackNavigator } from './ActivityStackNavigator';
 
 const Stack = createStackNavigator<HomeStackParamList>();
 
@@ -48,6 +49,13 @@ export const HomeStackNavigator: React.FC = () => {
         options={{
           title: 'Add New Pet',
           headerShown: true,
+        }}
+      />
+      <Stack.Screen 
+        name="ActivityWizard" 
+        component={ActivityStackNavigator}
+        options={{
+          headerShown: false, // Activity wizard handles its own headers
         }}
       />
     </Stack.Navigator>

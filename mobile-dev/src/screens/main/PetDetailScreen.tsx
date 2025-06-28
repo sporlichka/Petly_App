@@ -76,8 +76,10 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
   };
 
   const handleAddActivity = () => {
-    Alert.alert('Add Activity', 'Navigate to activity creation wizard');
-    // TODO: Navigate to activity creation wizard
+    navigation.navigate('ActivityWizard', {
+      screen: 'SelectType',
+      params: { petId: pet!.id }
+    });
   };
 
   const handleEditPet = () => {
