@@ -1,0 +1,239 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  User,
+  UserCreate,
+  UserLogin,
+  AuthResponse,
+  Pet,
+  PetCreate,
+  PetUpdate,
+  ActivityRecord,
+  ActivityRecordCreate,
+  ActivityRecordUpdate,
+  ChatRequest,
+  ChatResponse,
+  ChatSession,
+  ChatMessage,
+  ApiError
+} from '../types';
+
+const API_BASE_URL = 'http://0.0.0.0:8000'; // Your backend IP address
+
+// Activity category mapping - convert from frontend uppercase to backend lowercase
+const ActivityCategoryMap = {
+  'FEEDING': 'feeding',
+  'HEALTH': 'health',
+  'ACTIVITY': 'activity',
+} as const;
+
+class ApiService {
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    const token = await AsyncStorage.getItem('access_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    };
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const headers = await this.getAuthHeaders();
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers: {
+          ...headers,
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData: ApiError = await response.json();
+        throw new Error(errorData.detail || 'An error occurred');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  // Auth endpoints
+  async login(credentials: UserLogin): Promise<AuthResponse> {
+    const response = await this.request<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+    
+    // Store token for future requests
+    await AsyncStorage.setItem('access_token', response.access_token);
+    await AsyncStorage.setItem('user', JSON.stringify(response.user));
+    
+    return response;
+  }
+
+  async register(userData: UserCreate): Promise<User> {
+    return this.request<User>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async getCurrentUser(): Promise<User> {
+    return this.request<User>('/auth/me');
+  }
+
+  async logout(): Promise<void> {
+    await AsyncStorage.removeItem('access_token');
+    await AsyncStorage.removeItem('user');
+  }
+
+  // Pet endpoints
+  async getPets(): Promise<Pet[]> {
+    return this.request<Pet[]>('/pets/');
+  }
+
+  async createPet(petData: PetCreate): Promise<Pet> {
+    return this.request<Pet>('/pets/', {
+      method: 'POST',
+      body: JSON.stringify(petData),
+    });
+  }
+
+  async updatePet(petId: number, petData: PetUpdate): Promise<Pet> {
+    return this.request<Pet>(`/pets/${petId}`, {
+      method: 'PUT',
+      body: JSON.stringify(petData),
+    });
+  }
+
+  async deletePet(petId: number): Promise<void> {
+    await this.request(`/pets/${petId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Activity Record endpoints
+  async getActivityRecords(
+    petId: number,
+    category?: string,
+    skip = 0,
+    limit = 100
+  ): Promise<ActivityRecord[]> {
+    const params = new URLSearchParams({
+      pet_id: petId.toString(),
+      skip: skip.toString(),
+      limit: limit.toString(),
+    });
+    
+    if (category) {
+      // Map category to lowercase for backend if it's uppercase
+      const backendCategory = ActivityCategoryMap[category as keyof typeof ActivityCategoryMap] || category.toLowerCase();
+      params.append('category', backendCategory);
+    }
+
+    const records = await this.request<ActivityRecord[]>(`/records/?${params.toString()}`);
+    
+    // Map categories back to uppercase for frontend
+    return records.map(record => ({
+      ...record,
+      category: record.category.toUpperCase() as any,
+    }));
+  }
+
+  async getActivityRecord(recordId: number): Promise<ActivityRecord> {
+    const record = await this.request<ActivityRecord>(`/records/${recordId}`);
+    
+    // Map category back to uppercase for frontend
+    return {
+      ...record,
+      category: record.category.toUpperCase() as any,
+    };
+  }
+
+  async createActivityRecord(recordData: ActivityRecordCreate): Promise<ActivityRecord> {
+    // Map category to lowercase for backend
+    const backendData = {
+      ...recordData,
+      category: ActivityCategoryMap[recordData.category as keyof typeof ActivityCategoryMap] || recordData.category.toLowerCase(),
+    };
+    
+    return this.request<ActivityRecord>('/records/', {
+      method: 'POST',
+      body: JSON.stringify(backendData),
+    });
+  }
+
+  async updateActivityRecord(
+    recordId: number,
+    recordData: ActivityRecordUpdate
+  ): Promise<ActivityRecord> {
+    return this.request<ActivityRecord>(`/records/${recordId}`, {
+      method: 'PUT',
+      body: JSON.stringify(recordData),
+    });
+  }
+
+  async deleteActivityRecord(recordId: number): Promise<void> {
+    await this.request(`/records/${recordId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // AI Chat endpoints
+  async sendChatMessage(request: ChatRequest): Promise<ChatResponse> {
+    return this.request<ChatResponse>('/ai/assist', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async getChatSessions(): Promise<ChatSession[]> {
+    return this.request<ChatSession[]>('/ai/sessions');
+  }
+
+  async getChatSessionMessages(sessionId: string): Promise<ChatMessage[]> {
+    const response = await this.request<any[]>(`/ai/sessions/${sessionId}/messages`);
+    
+    // Convert backend format to our ChatMessage format
+    return response.map((event, index) => ({
+      id: event.id || index.toString(),
+      author: event.author,
+      content: event.content,
+      timestamp: event.timestamp,
+      isUser: event.author === 'user', // Adjust based on your backend logic
+    }));
+  }
+
+  async deleteChatSession(sessionId: string): Promise<void> {
+    await this.request(`/ai/sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async clearChatSessionMessages(sessionId: string): Promise<void> {
+    await this.request(`/ai/sessions/${sessionId}/messages`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Utility methods
+  async isAuthenticated(): Promise<boolean> {
+    const token = await AsyncStorage.getItem('access_token');
+    return !!token;
+  }
+
+  async getStoredUser(): Promise<User | null> {
+    const userString = await AsyncStorage.getItem('user');
+    return userString ? JSON.parse(userString) : null;
+  }
+}
+
+export const apiService = new ApiService();
+export default apiService; 

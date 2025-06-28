@@ -1,11 +1,13 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date
+from app.models.pet import PetGender
 
 class PetBase(BaseModel):
     name: str
     species: str
     breed: Optional[str] = None
+    gender: PetGender
     birthdate: date
     weight: float
     notes: Optional[str] = None

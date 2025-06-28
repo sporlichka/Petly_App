@@ -47,7 +47,7 @@ async def assist(
         # 2. Build a pet summary string
         if pets:
             pet_summary = "User's pets:\n" + "\n".join(
-                f"- {pet.name} ({pet.species}, {pet.breed}, age {pet.age}): {pet.notes}" for pet in pets
+                f"- {pet.name} ({pet.gender} {pet.species}, {pet.breed}, age {pet.age}): {pet.notes}" for pet in pets
             ) + "\n\n"
         else:
             pet_summary = "User has no pets registered.\n\n"

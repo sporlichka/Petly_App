@@ -1,6 +1,6 @@
 from typing import List
 from pydantic import BaseModel
-from app.models.pet import Pet
+from app.models.pet import Pet, PetGender
 from sqlalchemy.orm import Session
 from datetime import date
 
@@ -9,6 +9,7 @@ class PetInfo(BaseModel):
     name: str
     species: str
     breed: str
+    gender: str
     age: int  # in years
     notes: str
 
@@ -25,7 +26,8 @@ def get_user_pets(db: Session, user_id: int) -> List[PetInfo]:
             id=pet.id,
             name=pet.name,
             species=pet.species,
-            breed=pet.breed,
+            breed=pet.breed or "",
+            gender=pet.gender.value if pet.gender else "Unknown",
             age=calculate_age(pet.birthdate),
             notes=pet.notes or ""
         )
