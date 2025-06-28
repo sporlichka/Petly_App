@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MainTabParamList } from '../types';
 import { Colors } from '../constants/Colors';
 
-import { HomeScreen } from '../screens/main/HomeScreen';
+import { HomeStackNavigator } from './HomeStackNavigator';
 import { CalendarScreen } from '../screens/main/CalendarScreen';
 import { ChatScreen } from '../screens/main/ChatScreen';
 import { SettingsScreen } from '../screens/main/SettingsScreen';
@@ -71,7 +71,7 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
     >
       <Tab.Screen 
         name="Home" 
-        component={HomeScreen}
+        component={HomeStackNavigator}
         options={{
           title: 'My Pets',
           headerTitle: '🐾 My Pets',

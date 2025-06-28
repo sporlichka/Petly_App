@@ -8,15 +8,23 @@ import {
   Alert,
   SafeAreaView,
 } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Pet } from '../../types';
+import { Pet, HomeStackParamList } from '../../types';
 import { PetCard } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
 
-export const HomeScreen: React.FC = () => {
+type HomeScreenNavigationProp = StackNavigationProp<HomeStackParamList, 'PetList'>;
+
+interface HomeScreenProps {
+  navigation: HomeScreenNavigationProp;
+}
+
+export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [pets, setPets] = useState<Pet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -24,6 +32,13 @@ export const HomeScreen: React.FC = () => {
   useEffect(() => {
     loadPets();
   }, []);
+
+  // Refresh pets when screen comes into focus (e.g., returning from AddPet screen)
+  useFocusEffect(
+    React.useCallback(() => {
+      loadPets();
+    }, [])
+  );
 
   const loadPets = async () => {
     try {
@@ -72,8 +87,7 @@ export const HomeScreen: React.FC = () => {
   const renderPetCard = ({ item: pet }: { item: Pet }) => (
     <PetCard
       onPress={() => {
-        // TODO: Navigate to pet detail screen
-        Alert.alert('Pet Details', `Navigate to ${pet.name}'s details`);
+        navigation.navigate('PetDetail', { petId: pet.id });
       }}
     >
       <View style={styles.petCardContent}>
@@ -126,8 +140,7 @@ export const HomeScreen: React.FC = () => {
       <Button
         title="Add Your First Pet"
         onPress={() => {
-          // TODO: Navigate to add pet screen
-          Alert.alert('Add Pet', 'Navigate to add pet screen');
+          navigation.navigate('AddPet');
         }}
         style={styles.addPetButton}
       />
@@ -174,10 +187,9 @@ export const HomeScreen: React.FC = () => {
       {pets.length > 0 && (
         <View style={styles.fab}>
           <Button
-            title="+ Add Activity"
+            title="+ Add Pet"
             onPress={() => {
-              // TODO: Navigate to add activity screen
-              Alert.alert('Add Activity', 'Navigate to add activity screen');
+              navigation.navigate('AddPet');
             }}
             variant="secondary"
             size="small"

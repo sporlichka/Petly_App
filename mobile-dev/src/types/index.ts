@@ -129,6 +129,12 @@ export type MainTabParamList = {
   Settings: undefined;
 };
 
+export type HomeStackParamList = {
+  PetList: undefined;
+  PetDetail: { petId: number };
+  AddPet: undefined;
+};
+
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;

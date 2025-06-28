@@ -17,7 +17,7 @@ import {
   ApiError
 } from '../types';
 
-const API_BASE_URL = 'http://0.0.0.0:8000'; // Your backend IP address
+const API_BASE_URL = 'http://192.168.167.210:8000'; // Your backend IP address
 
 // Activity category mapping - convert from frontend uppercase to backend lowercase
 const ActivityCategoryMap = {
