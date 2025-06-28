@@ -19,19 +19,40 @@ export const RootNavigator: React.FC = () => {
 
   const checkAuthStatus = async () => {
     try {
+      console.log('🔍 Checking authentication status...');
       const authenticated = await apiService.isAuthenticated();
+      console.log('🔍 Authentication result:', authenticated);
+      
       setIsAuthenticated(authenticated);
 
       if (authenticated) {
-        // Check if user has pets (completed onboarding)
-        const pets = await apiService.getPets();
-        setHasCompletedOnboarding(pets.length > 0);
+        console.log('✅ User is authenticated, checking onboarding status...');
+        await checkOnboardingStatus();
+      } else {
+        console.log('❌ User is not authenticated');
+        setHasCompletedOnboarding(false);
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('❌ Auth check failed:', error);
       setIsAuthenticated(false);
+      setHasCompletedOnboarding(false);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const pets = await apiService.getPets();
+      const completed = pets.length > 0;
+      console.log(`📊 Found ${pets.length} pets, onboarding completed: ${completed}`);
+      setHasCompletedOnboarding(completed);
+    } catch (error) {
+      console.error('❌ Failed to check onboarding status:', error);
+      // If we can't get pets, it might be an auth issue
+      // The API service will handle token cleanup automatically
+      setIsAuthenticated(false);
+      setHasCompletedOnboarding(false);
     }
   };
 
@@ -40,25 +61,18 @@ export const RootNavigator: React.FC = () => {
     setIsAuthenticated(true);
     setIsLoading(true);
     
-    try {
-      // Check if user has pets (completed onboarding)
-      const pets = await apiService.getPets();
-      const hasCompletedOnboarding = pets.length > 0;
-      console.log(`📊 User has ${pets.length} pets, onboarding completed: ${hasCompletedOnboarding}`);
-      setHasCompletedOnboarding(hasCompletedOnboarding);
-    } catch (error) {
-      console.error('Failed to check onboarding status:', error);
-      setHasCompletedOnboarding(false);
-    } finally {
-      setIsLoading(false);
-    }
+    await checkOnboardingStatus();
+    setIsLoading(false);
   };
 
   const handleOnboardingComplete = () => {
+    console.log('🎉 Onboarding completed!');
     setHasCompletedOnboarding(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    console.log('👋 Logging out...');
+    await apiService.logout();
     setIsAuthenticated(false);
     setHasCompletedOnboarding(false);
   };

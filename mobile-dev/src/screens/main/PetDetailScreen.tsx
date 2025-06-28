@@ -5,8 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -128,7 +128,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading pet details... 🐾</Text>
         </View>
@@ -138,7 +138,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
 
   if (!pet) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>Pet not found</Text>
           <Text style={styles.errorText}>This pet may have been deleted.</Text>
@@ -153,7 +153,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
@@ -249,7 +249,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
             onPress={handleDeletePet}
             variant="outline"
             loading={isDeleting}
-            style={[styles.actionButton, styles.deleteButton]}
+            style={StyleSheet.flatten([styles.actionButton, styles.deleteButton])}
             textStyle={styles.deleteButtonText}
           />
         </View>

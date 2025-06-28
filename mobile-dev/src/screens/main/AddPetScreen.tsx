@@ -7,9 +7,9 @@ import {
   Platform,
   ScrollView,
   Alert,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -128,10 +128,10 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={Colors.gradient.background}
+      colors={Colors.gradient.background as any}
       style={styles.container}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}

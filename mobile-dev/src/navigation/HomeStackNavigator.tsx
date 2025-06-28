@@ -31,16 +31,16 @@ export const HomeStackNavigator: React.FC = () => {
         name="PetList" 
         component={HomeScreen}
         options={{
-          headerShown: false, // Home screen has its own header via tab navigator
+          headerShown: false, // Home screen header is handled by tab navigator
         }}
       />
       <Stack.Screen 
         name="PetDetail" 
         component={PetDetailScreen}
-        options={({ route }) => ({
+        options={{
           title: 'Pet Details',
           headerShown: true,
-        })}
+        }}
       />
       <Stack.Screen 
         name="AddPet" 

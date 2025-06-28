@@ -6,8 +6,8 @@ import {
   FlatList,
   RefreshControl,
   Alert,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,14 +42,40 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const loadPets = async () => {
     try {
+      console.log('🏠 Loading pets...');
       const petsData = await apiService.getPets();
+      console.log(`🏠 Successfully loaded ${petsData.length} pets`);
       setPets(petsData);
     } catch (error) {
-      Alert.alert(
-        'Error',
-        'Failed to load pets. Please try again.',
-        [{ text: 'OK' }]
-      );
+      console.error('🏠 Failed to load pets:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      if (errorMessage.includes('Authentication expired')) {
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please log in again.',
+          [{ text: 'OK' }]
+        );
+      } else if (errorMessage.includes('Network error')) {
+        Alert.alert(
+          'Connection Error',
+          'Unable to connect to the server. Please check your internet connection and try again.',
+          [
+            { text: 'Cancel' },
+            { text: 'Retry', onPress: () => loadPets() }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to load pets. Please try again.',
+          [
+            { text: 'Cancel' },
+            { text: 'Retry', onPress: () => loadPets() }
+          ]
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -149,14 +175,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer} edges={['bottom']}>
         <Text style={styles.loadingText}>Loading your pets... 🐾</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.welcomeText}>Welcome back! 👋</Text>
         <Text style={styles.subtitle}>

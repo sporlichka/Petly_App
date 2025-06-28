@@ -76,6 +76,33 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
           title: 'My Pets',
           headerTitle: '🐾 My Pets',
         }}
+        listeners={({ navigation }) => ({
+          state: (e) => {
+            // Hide tab bar when navigating to nested screens
+            const state = navigation.getState();
+            const homeRoute = state.routes.find(route => route.name === 'Home');
+            const homeState = homeRoute?.state;
+            
+            if (homeState && homeState.index !== undefined && homeState.index > 0) {
+              navigation.setOptions({
+                tabBarStyle: { display: 'none' },
+                headerShown: false,
+              });
+            } else {
+              navigation.setOptions({
+                tabBarStyle: {
+                  backgroundColor: Colors.surface,
+                  borderTopColor: Colors.borderLight,
+                  borderTopWidth: 1,
+                  paddingBottom: Math.max(insets.bottom, 5),
+                  paddingTop: 5,
+                  height: 60 + Math.max(insets.bottom - 5, 0),
+                },
+                headerShown: true,
+              });
+            }
+          },
+        })}
       />
       <Tab.Screen 
         name="Calendar" 

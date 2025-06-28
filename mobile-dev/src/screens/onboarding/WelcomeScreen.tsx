@@ -3,8 +3,8 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -25,10 +25,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={Colors.gradient.background}
+      colors={Colors.gradient.background as any}
       style={styles.container}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <View style={styles.content}>
           {/* Illustration Section */}
           <View style={styles.illustrationContainer}>

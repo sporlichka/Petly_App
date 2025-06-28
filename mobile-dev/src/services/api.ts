@@ -35,6 +35,13 @@ class ApiService {
     };
   }
 
+  private async handleUnauthorized(): Promise<void> {
+    // Clear expired token and user data
+    await AsyncStorage.removeItem('access_token');
+    await AsyncStorage.removeItem('user');
+    console.log('🔑 Token expired - cleared from storage');
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -49,6 +56,12 @@ class ApiService {
           ...options.headers,
         },
       });
+
+      if (response.status === 401) {
+        // Handle token expiration
+        await this.handleUnauthorized();
+        throw new Error('Authentication expired. Please log in again.');
+      }
 
       if (!response.ok) {
         const errorData: ApiError = await response.json();
@@ -74,6 +87,7 @@ class ApiService {
     // Store token for future requests
     await AsyncStorage.setItem('access_token', response.access_token);
     await AsyncStorage.setItem('user', JSON.stringify(response.user));
+    console.log('🔑 New token stored successfully');
     
     return response;
   }
@@ -92,6 +106,7 @@ class ApiService {
   async logout(): Promise<void> {
     await AsyncStorage.removeItem('access_token');
     await AsyncStorage.removeItem('user');
+    console.log('🔑 Logged out - tokens cleared');
   }
 
   // Pet endpoints
@@ -224,9 +239,41 @@ class ApiService {
   }
 
   // Utility methods
+  private isTokenExpired(token: string): boolean {
+    try {
+      // Simple JWT token expiration check without verification
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      return payload.exp < currentTime;
+    } catch (error) {
+      // If we can't parse the token, consider it invalid
+      return true;
+    }
+  }
+
   async isAuthenticated(): Promise<boolean> {
     const token = await AsyncStorage.getItem('access_token');
-    return !!token;
+    if (!token) {
+      return false;
+    }
+
+    // First check if token is expired without making API call
+    if (this.isTokenExpired(token)) {
+      console.log('🔑 Token is expired, clearing...');
+      await this.handleUnauthorized();
+      return false;
+    }
+
+    // Token appears valid, but let's verify with a quick API call
+    try {
+      await this.getCurrentUser();
+      return true;
+    } catch (error) {
+      console.log('🔑 Token validation failed:', error);
+      // Token is invalid or expired, clear it
+      await this.handleUnauthorized();
+      return false;
+    }
   }
 
   async getStoredUser(): Promise<User | null> {
