@@ -17,7 +17,10 @@ class ActivityRecordBase(BaseModel):
     notify: bool = True
     notes: Optional[str] = None
     food_type: Optional[str] = None
-    quantity: Optional[float] = None
+    quantity: Optional[str] = None
+    duration: Optional[str] = None
+    temperature: Optional[float] = None
+    weight: Optional[float] = None
 
 class ActivityRecordCreate(ActivityRecordBase):
     pet_id: int
@@ -31,7 +34,10 @@ class ActivityRecordUpdate(BaseModel):
     notify: Optional[bool] = None
     notes: Optional[str] = None
     food_type: Optional[str] = None
-    quantity: Optional[float] = None
+    quantity: Optional[str] = None
+    duration: Optional[str] = None
+    temperature: Optional[float] = None
+    weight: Optional[float] = None
 
 class ActivityRecordRead(ActivityRecordBase):
     id: int

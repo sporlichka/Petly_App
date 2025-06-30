@@ -72,12 +72,6 @@ def update_activity_record(
 ):
     """Частично обновить запись активности"""
     try:
-        print(f"=== ROUTER PATCH DEBUG ===")
-        print(f"Record ID: {record_id}")
-        print(f"Update data received: {record_update}")
-        print(f"Update data dict: {record_update.dict()}")
-        print(f"Update data dict (exclude_unset=True): {record_update.dict(exclude_unset=True)}")
-        
         record = ActivityRecordService.update_record(
             db=db, 
             record_id=record_id, 
@@ -85,13 +79,11 @@ def update_activity_record(
             current_user=current_user
         )
         if not record:
-            print(f"Record not found or access denied for ID: {record_id}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied or record not found"
             )
         
-        print(f"Successfully updated record: {record}")
         return record
         
     except HTTPException:

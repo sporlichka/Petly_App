@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Enum, Float, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Enum, Boolean, Float
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 import enum
@@ -25,7 +25,14 @@ class ActivityRecord(Base):
     
     # Специфичные поля для feeding
     food_type = Column(String, nullable=True)
-    quantity = Column(Float, nullable=True)
+    quantity = Column(String, nullable=True)  # Changed from Float to String for "2 cups", "200g", etc.
+    
+    # Специфичные поля для activity
+    duration = Column(String, nullable=True)  # e.g., "30 minutes", "1 hour"
+    
+    # Специфичные поля для health
+    temperature = Column(Float, nullable=True)  # Temperature in Celsius
+    weight = Column(Float, nullable=True)  # Weight in kg
     
     # Связь с питомцем
     pet = relationship("Pet", back_populates="activity_records") 

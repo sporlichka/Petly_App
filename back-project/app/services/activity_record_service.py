@@ -20,9 +20,13 @@ class ActivityRecordService:
             date=record.date,
             time=record.time,
             repeat=record.repeat,
+            notify=record.notify if record.notify is not None else True,
             notes=record.notes,
             food_type=record.food_type,
-            quantity=record.quantity
+            quantity=record.quantity,
+            duration=record.duration,
+            temperature=record.temperature,
+            weight=record.weight
         )
         db.add(db_record)
         db.commit()
@@ -71,23 +75,15 @@ class ActivityRecordService:
         if not db_record:
             return None
         
-        print(f"=== BACKEND PATCH DEBUG ===")
-        print(f"Record ID: {record_id}")
-        print(f"Record update data: {record_update}")
-        print(f"Record update dict (exclude_unset=True): {record_update.dict(exclude_unset=True)}")
-        
         # Use exclude_unset=True for PATCH - only update provided fields
         update_data = record_update.dict(exclude_unset=True)
-        print(f"Final update data: {update_data}")
         
         for field, value in update_data.items():
             if hasattr(db_record, field):
-                print(f"Setting {field} = {value} (type: {type(value)})")
                 setattr(db_record, field, value)
         
         db.commit()
         db.refresh(db_record)
-        print(f"Updated record: {db_record.__dict__}")
         return db_record
 
     @staticmethod
