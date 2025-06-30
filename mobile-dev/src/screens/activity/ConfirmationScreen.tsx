@@ -136,8 +136,6 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           food_type: activityData.food_type || undefined,
           quantity: activityData.quantity || undefined,
           duration: activityData.duration || undefined,
-          temperature: activityData.temperature ? parseFloat(activityData.temperature) : undefined,
-          weight: activityData.weight ? parseFloat(activityData.weight) : undefined,
         };
 
         console.log('Updating activity record:', activityUpdate);
@@ -186,8 +184,6 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           food_type: activityData.food_type || undefined,
           quantity: activityData.quantity || undefined,
           duration: activityData.duration || undefined,
-          temperature: activityData.temperature ? parseFloat(activityData.temperature) : undefined,
-          weight: activityData.weight ? parseFloat(activityData.weight) : undefined,
         };
 
         console.log('Creating activity record:', activityRecord);
@@ -302,7 +298,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           </Card>
 
           {/* Category-specific Details */}
-          {(activityData.food_type || activityData.quantity || activityData.duration || activityData.weight || activityData.temperature) && (
+          {(activityData.food_type || activityData.quantity || activityData.duration) && (
             <Card variant="default" style={styles.detailsCard}>
               <Text style={styles.sectionTitle}>Additional Details</Text>
               
@@ -332,26 +328,6 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
                   <View style={styles.detailContent}>
                     <Text style={styles.detailLabel}>Duration</Text>
                     <Text style={styles.detailValue}>{activityData.duration}</Text>
-                  </View>
-                </View>
-              )}
-
-              {activityData.weight && (
-                <View style={styles.detailRow}>
-                  <Ionicons name="scale-outline" size={20} color={Colors.textSecondary} />
-                  <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Weight</Text>
-                    <Text style={styles.detailValue}>{activityData.weight}</Text>
-                  </View>
-                </View>
-              )}
-
-              {activityData.temperature && (
-                <View style={styles.detailRow}>
-                  <Ionicons name="thermometer-outline" size={20} color={Colors.textSecondary} />
-                  <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Temperature</Text>
-                    <Text style={styles.detailValue}>{activityData.temperature}</Text>
                   </View>
                 </View>
               )}

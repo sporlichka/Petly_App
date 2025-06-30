@@ -30,9 +30,5 @@ class ActivityRecord(Base):
     # Специфичные поля для activity
     duration = Column(String, nullable=True)  # e.g., "30 minutes", "1 hour"
     
-    # Специфичные поля для health
-    temperature = Column(Float, nullable=True)  # Temperature in Celsius
-    weight = Column(Float, nullable=True)  # Weight in kg
-    
     # Связь с питомцем
     pet = relationship("Pet", back_populates="activity_records") 

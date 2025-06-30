@@ -26,8 +26,6 @@ class ActivityRecordService:
             food_type=record.food_type,
             quantity=record.quantity,
             duration=record.duration,
-            temperature=record.temperature,
-            weight=record.weight
         )
         db.add(db_record)
         db.commit()

@@ -244,9 +244,6 @@ export class NotificationService {
         break;
       case 'HEALTH':
         body = `🩺 Health check time for ${pet}`;
-        if (activity.temperature || activity.weight) {
-          body += ' - check vitals';
-        }
         break;
       case 'ACTIVITY':
         body = `🎾 Time for ${pet}'s activity`;

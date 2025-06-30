@@ -352,6 +352,46 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     return pet?.name || 'Unknown Pet';
   };
 
+  const renderActivityDetails = (activity: ActivityRecord): React.ReactNode => {
+    const details = [];
+    
+    // Show feeding-specific details
+    if (activity.category === 'FEEDING') {
+      if (activity.food_type) {
+        details.push(`🍽️ ${activity.food_type}`);
+      }
+      if (activity.quantity) {
+        details.push(`📏 ${activity.quantity}`);
+      }
+    }
+    
+    // Show activity-specific details
+    if (activity.category === 'ACTIVITY') {
+      if (activity.duration) {
+        details.push(`⏱️ ${activity.duration}`);
+      }
+    }
+    
+    // Show health-specific details (without temperature and weight)
+    if (activity.category === 'HEALTH') {
+      // Only show notes for health records, temperature and weight will be removed
+    }
+    
+    if (details.length > 0) {
+      return (
+        <View style={styles.activityDetails}>
+          {details.map((detail, index) => (
+            <Text key={index} style={styles.activityDetail}>
+              {detail}
+            </Text>
+          ))}
+        </View>
+      );
+    }
+    
+    return null;
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -442,6 +482,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
                           <Text style={styles.activityTime}>{formatTime(activity.time)}</Text>
                         </View>
                         <Text style={styles.activityPet}>{getPetName(activity.pet_id)}</Text>
+                        {renderActivityDetails(activity)}
                         {activity.notes && (
                           <Text style={styles.activityNotes}>{activity.notes}</Text>
                         )}
@@ -578,10 +619,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 4,
   },
-  activityNotes: {
+  activityDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activityDetail: {
     fontSize: 14,
     color: Colors.textSecondary,
-    lineHeight: 20,
+    marginRight: 4,
   },
   activityActions: {
     flexDirection: 'row',
@@ -691,5 +736,10 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginTop: 16,
+  },
+  activityNotes: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: 4,
   },
 }); 

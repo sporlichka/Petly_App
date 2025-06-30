@@ -66,8 +66,6 @@ export interface ActivityRecord {
   food_type?: string; // Only for feeding category
   quantity?: string; // Changed to string for "2 cups", "200g", etc.
   duration?: string; // Only for activity category
-  temperature?: number; // Only for health category
-  weight?: number; // Only for health category
 }
 
 export interface ActivityRecordCreate {
@@ -82,8 +80,6 @@ export interface ActivityRecordCreate {
   food_type?: string;
   quantity?: string;
   duration?: string;
-  temperature?: number;
-  weight?: number;
 }
 
 export interface ActivityRecordUpdate {
@@ -96,8 +92,6 @@ export interface ActivityRecordUpdate {
   food_type?: string;
   quantity?: string;
   duration?: string;
-  temperature?: number;
-  weight?: number;
 }
 
 // AI Chat types
@@ -186,8 +180,6 @@ export interface ActivityFormData {
   food_type?: string;
   quantity?: string;
   duration?: string;
-  weight?: string;
-  temperature?: string;
 }
 
 export interface DateTimeData {

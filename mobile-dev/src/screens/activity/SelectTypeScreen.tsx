@@ -59,9 +59,7 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
       notes: editActivity.notes || '',
       food_type: editActivity.food_type || '',
       quantity: editActivity.quantity?.toString() || '',
-      duration: '', // Not stored in current model
-      weight: '', // Not stored in current model  
-      temperature: '', // Not stored in current model
+      duration: editActivity.duration || '',
     } : undefined;
 
     navigation.navigate('FillDetails', { 

@@ -45,8 +45,6 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
       food_type: '',
       quantity: '',
       duration: '',
-      weight: '',
-      temperature: '',
     };
   });
   
@@ -127,44 +125,20 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
     <>
       <Input
         label="Food Type *"
-        placeholder="e.g., Dry kibble, Wet food, Treats"
+        placeholder="e.g., Dry food, Wet food, Treats"
         value={formData.food_type || ''}
         onChangeText={(text) => updateFormData('food_type', text)}
         error={errors.food_type}
-        leftIcon={<Ionicons name="restaurant" size={20} color={Colors.textSecondary} />}
+        leftIcon={<Ionicons name="restaurant-outline" size={20} color={Colors.textSecondary} />}
       />
       
       <Input
-        label="Quantity"
-        placeholder="e.g., 1 cup, 200g, 2 treats"
+        label="Quantity (Optional)"
+        placeholder="e.g., 2 cups, 200g, 1 can"
         value={formData.quantity || ''}
         onChangeText={(text) => updateFormData('quantity', text)}
         error={errors.quantity}
         leftIcon={<Ionicons name="scale-outline" size={20} color={Colors.textSecondary} />}
-      />
-    </>
-  );
-
-  const renderHealthForm = () => (
-    <>
-      <Input
-        label="Weight (Optional)"
-        placeholder="e.g., 15.5 kg"
-        value={formData.weight || ''}
-        onChangeText={(text) => updateFormData('weight', text)}
-        error={errors.weight}
-        keyboardType="decimal-pad"
-        leftIcon={<Ionicons name="scale-outline" size={20} color={Colors.textSecondary} />}
-      />
-      
-      <Input
-        label="Temperature (Optional)"
-        placeholder="e.g., 38.5°C"
-        value={formData.temperature || ''}
-        onChangeText={(text) => updateFormData('temperature', text)}
-        error={errors.temperature}
-        keyboardType="decimal-pad"
-        leftIcon={<Ionicons name="thermometer-outline" size={20} color={Colors.textSecondary} />}
       />
     </>
   );
@@ -219,7 +193,6 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
               />
 
               {category === 'FEEDING' && renderFeedingForm()}
-              {category === 'HEALTH' && renderHealthForm()}
               {category === 'ACTIVITY' && renderActivityForm()}
 
               <Input
