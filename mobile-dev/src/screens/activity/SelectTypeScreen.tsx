@@ -25,7 +25,7 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, editActivity } = route.params;
+  const { petId, editActivity, preselectedDate } = route.params;
   const isEditMode = !!editActivity;
 
   const activityTypes = [
@@ -68,7 +68,8 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
       petId, 
       category,
       editActivity,
-      activityData: initialData
+      activityData: initialData,
+      preselectedDate
     });
   };
 

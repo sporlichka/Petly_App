@@ -31,7 +31,7 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, editActivity, activityData: initialData } = route.params;
+  const { petId, category, editActivity, activityData: initialData, preselectedDate } = route.params;
   const isEditMode = !!editActivity;
   
   const [formData, setFormData] = useState<ActivityFormData>(() => {
@@ -109,7 +109,8 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
       petId, 
       category,
       editActivity,
-      activityData: formData 
+      activityData: formData,
+      preselectedDate
     });
   };
 

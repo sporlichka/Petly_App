@@ -30,7 +30,7 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, editActivity, activityData } = route.params;
+  const { petId, category, editActivity, activityData, preselectedDate } = route.params;
   const isEditMode = !!editActivity;
   
   const [repeatData, setRepeatData] = useState<RepeatData>(() => {
@@ -111,7 +111,8 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
       petId, 
       category,
       editActivity,
-      activityData: finalData 
+      activityData: finalData,
+      preselectedDate
     });
   };
 

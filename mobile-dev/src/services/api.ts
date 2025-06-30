@@ -56,14 +56,44 @@ class ApiService {
         throw new Error('Authentication expired. Please log in again.');
       }
 
+      // Check if response is ok
       if (!response.ok) {
-        const errorData: ApiError = await response.json();
-        throw new Error(errorData.detail || 'An error occurred');
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          // Try to parse as JSON first
+          const errorData: ApiError = await response.json();
+          errorMessage = errorData.detail || errorMessage;
+        } catch (jsonError) {
+          // If JSON parsing fails, try to get text response
+          try {
+            const textResponse = await response.text();
+            console.error('Non-JSON error response:', textResponse);
+            errorMessage = `${errorMessage}. Response: ${textResponse.substring(0, 200)}...`;
+          } catch (textError) {
+            console.error('Failed to read error response:', textError);
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      return await response.json();
+      // Try to parse successful response as JSON
+      try {
+        return await response.json();
+      } catch (jsonError) {
+        console.error('Failed to parse response as JSON:', jsonError);
+        const textResponse = await response.text();
+        console.error('Response text:', textResponse);
+        throw new Error(`Invalid JSON response. Response: ${textResponse.substring(0, 200)}...`);
+      }
     } catch (error) {
       if (error instanceof Error) {
+        console.error('API request failed:', {
+          endpoint,
+          error: error.message,
+          type: error.name
+        });
         throw error;
       }
       throw new Error('Network error occurred');
@@ -148,6 +178,62 @@ class ApiService {
     const records = await this.request<ActivityRecord[]>(`/records/?${params.toString()}`);
     
     // Categories should already be uppercase from backend
+    return records;
+  }
+
+  async getAllUserActivityRecords(
+    category?: string,
+    skip = 0,
+    limit = 1000
+  ): Promise<ActivityRecord[]> {
+    const params = new URLSearchParams({
+      skip: skip.toString(),
+      limit: limit.toString(),
+    });
+    
+    if (category) {
+      params.append('category', category.toUpperCase());
+    }
+
+    const records = await this.request<ActivityRecord[]>(`/records/all-user-pets?${params.toString()}`);
+    return records;
+  }
+
+  async getActivityRecordsByDate(
+    date: string, // Format: YYYY-MM-DD
+    category?: string
+  ): Promise<ActivityRecord[]> {
+    const params = new URLSearchParams({
+      date: date,
+    });
+    
+    if (category) {
+      params.append('category', category.toUpperCase());
+    }
+
+    const records = await this.request<ActivityRecord[]>(`/records/by-date?${params.toString()}`);
+    return records;
+  }
+
+  async getActivityRecordsByDateRange(
+    startDate: string, // Format: YYYY-MM-DD
+    endDate: string,   // Format: YYYY-MM-DD
+    category?: string,
+    skip = 0,
+    limit = 1000
+  ): Promise<ActivityRecord[]> {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+      skip: skip.toString(),
+      limit: limit.toString(),
+    });
+    
+    if (category) {
+      params.append('category', category.toUpperCase());
+    }
+
+    const records = await this.request<ActivityRecord[]>(`/records/by-date-range?${params.toString()}`);
     return records;
   }
 

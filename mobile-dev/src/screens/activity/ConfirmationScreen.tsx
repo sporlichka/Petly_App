@@ -30,7 +30,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, editActivity, activityData } = route.params;
+  const { petId, category, editActivity, activityData, preselectedDate } = route.params;
   const [isSaving, setIsSaving] = useState(false);
   const isEditMode = !!editActivity;
 

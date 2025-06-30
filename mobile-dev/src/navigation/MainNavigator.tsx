@@ -105,13 +105,14 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
         })}
       />
       <Tab.Screen 
-        name="Calendar" 
-        component={CalendarScreen}
+        name="Calendar"
         options={{
           title: 'Activities',
           headerTitle: '📅 Activities',
         }}
-      />
+      >
+        {(props) => <CalendarScreen {...props} />}
+      </Tab.Screen>
       <Tab.Screen 
         name="Chat" 
         component={ChatScreen}

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import date
 from app.auth.deps import get_db, get_current_user
 from app.models.user import User
 from app.schemas.activity_record import (
@@ -12,6 +13,68 @@ from app.schemas.activity_record import (
 from app.services.activity_record_service import ActivityRecordService
 
 router = APIRouter(prefix="/records", tags=["activity_records"])
+
+@router.get("/all-user-pets", response_model=List[ActivityRecordRead])
+def get_all_user_activity_records(
+    category: Optional[ActivityCategory] = Query(None, description="Категория записи"),
+    skip: int = Query(0, ge=0, description="Количество записей для пропуска"),
+    limit: int = Query(1000, ge=1, le=1000, description="Максимальное количество записей"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Получить все записи активности для всех питомцев пользователя"""
+    records = ActivityRecordService.get_all_user_records(
+        db=db,
+        current_user=current_user,
+        category=category,
+        skip=skip,
+        limit=limit
+    )
+    return records
+
+@router.get("/by-date", response_model=List[ActivityRecordRead])
+def get_activity_records_by_date(
+    date: date = Query(..., description="Дата в формате YYYY-MM-DD"),
+    category: Optional[ActivityCategory] = Query(None, description="Категория записи"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Получить записи активности на конкретную дату для всех питомцев пользователя"""
+    records = ActivityRecordService.get_records_by_date(
+        db=db,
+        target_date=date,
+        current_user=current_user,
+        category=category
+    )
+    return records
+
+@router.get("/by-date-range", response_model=List[ActivityRecordRead])
+def get_activity_records_by_date_range(
+    start_date: date = Query(..., description="Начальная дата в формате YYYY-MM-DD"),
+    end_date: date = Query(..., description="Конечная дата в формате YYYY-MM-DD"),
+    category: Optional[ActivityCategory] = Query(None, description="Категория записи"),
+    skip: int = Query(0, ge=0, description="Количество записей для пропуска"),
+    limit: int = Query(1000, ge=1, le=1000, description="Максимальное количество записей"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Получить записи активности в диапазоне дат для всех питомцев пользователя"""
+    if start_date > end_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Start date must be before or equal to end date"
+        )
+    
+    records = ActivityRecordService.get_records_by_date_range(
+        db=db,
+        start_date=start_date,
+        end_date=end_date,
+        current_user=current_user,
+        category=category,
+        skip=skip,
+        limit=limit
+    )
+    return records
 
 @router.post("/", response_model=ActivityRecordRead)
 def create_activity_record(

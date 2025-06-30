@@ -29,7 +29,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, editActivity, activityData } = route.params;
+  const { petId, category, editActivity, activityData, preselectedDate } = route.params;
   const isEditMode = !!editActivity;
   
   const [dateTimeData, setDateTimeData] = useState<DateTimeData>(() => {
@@ -40,6 +40,16 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
         time: new Date(editActivity.time),
       };
     }
+    
+    // Use preselected date from calendar if provided
+    if (preselectedDate) {
+      const selectedDate = new Date(preselectedDate);
+      return {
+        date: selectedDate,
+        time: new Date(), // Current time
+      };
+    }
+    
     return {
       date: new Date(),
       time: new Date(),
@@ -124,7 +134,8 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
       petId, 
       category,
       editActivity,
-      activityData: combinedDateTime 
+      activityData: combinedDateTime,
+      preselectedDate
     });
   };
 

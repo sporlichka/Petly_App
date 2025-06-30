@@ -12,13 +12,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, CommonActions } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
 
 import { Colors } from '../../constants/Colors';
-import { ActivityRecord, Pet, ActivityCategory } from '../../types';
+import { ActivityRecord, Pet, ActivityCategory, MainTabParamList, HomeStackParamList } from '../../types';
 import { apiService } from '../../services/api';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
+
+type CalendarNavigationProp = CompositeNavigationProp<
+  StackNavigationProp<MainTabParamList, 'Calendar'>,
+  StackNavigationProp<HomeStackParamList>
+>;
+
+interface CalendarScreenProps {
+  navigation: CalendarNavigationProp;
+}
 
 interface MarkedDates {
   [key: string]: {
@@ -66,7 +77,7 @@ const PetSelectorModal: React.FC<PetSelectorModalProps> = ({ pets, onSelectPet, 
   </View>
 );
 
-export const CalendarScreen: React.FC = () => {
+export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) => {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -111,25 +122,83 @@ export const CalendarScreen: React.FC = () => {
       ]);
       setPets(petsResponse);
 
-      // Load activities for all pets
-      const allPetActivities: ActivityRecord[] = [];
-      for (const pet of petsResponse) {
-        try {
-          const petActivities = await apiService.getActivityRecords(pet.id);
-          allPetActivities.push(...petActivities);
-        } catch (error) {
-          console.error(`Failed to load activities for pet ${pet.id}:`, error);
-        }
-      }
-
-      setAllActivities(allPetActivities);
-      updateMarkedDates(allPetActivities);
-      filterActivitiesByDate(selectedDate, allPetActivities);
+      // Load activities for the current month (more efficient than loading all)
+      await loadActivitiesForMonth(selectedDate);
+      
+      // Load activities for the currently selected date
+      await loadActivitiesForDate(selectedDate);
     } catch (error) {
       console.error('Failed to load data:', error);
       Alert.alert('Error', 'Failed to load calendar data. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadActivitiesForDate = async (dateStr: string) => {
+    try {
+      // Use the new optimized API call for specific date
+      const dateActivities = await apiService.getActivityRecordsByDate(dateStr);
+      
+      // Sort by time
+      dateActivities.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+      setActivities(dateActivities);
+    } catch (error) {
+      console.error('Failed to load activities for date:', error);
+
+      
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      if (errorMessage.includes('authentication') || errorMessage.includes('401')) {
+        Alert.alert('Authentication Error', 'Please log in again to continue.');
+      } else if (!errorMessage.includes('Network')) {
+        // Only show alert for non-network errors to avoid spam
+        Alert.alert(
+          'Loading Error', 
+          'Unable to load activities for this date. Using cached data instead.',
+          [{ text: 'OK' }]
+        );
+      }
+      
+      // Fallback to client-side filtering if API call fails
+      filterActivitiesByDate(dateStr);
+    }
+  };
+
+  const loadActivitiesForMonth = async (dateStr: string) => {
+    try {
+      // Calculate start and end of month
+      const date = new Date(dateStr);
+      const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+      const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      
+      const startDateStr = startOfMonth.toISOString().split('T')[0];
+      const endDateStr = endOfMonth.toISOString().split('T')[0];
+      
+      // Use the new optimized API call for date range
+      const monthActivities = await apiService.getActivityRecordsByDateRange(startDateStr, endDateStr);
+      
+      // Update calendar dots
+      updateMarkedDates(monthActivities);
+      
+      // Store activities for client-side fallback
+      setAllActivities(monthActivities);
+    } catch (error) {
+      console.error('Failed to load activities for month:', error);
+      try {
+        // Fallback to loading all activities
+        const allActivities = await apiService.getAllUserActivityRecords();
+        setAllActivities(allActivities);
+        updateMarkedDates(allActivities);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        // If both fail, show error but don't crash
+        Alert.alert(
+          'Connection Error',
+          'Unable to load calendar data. Please check your internet connection and try again.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 
@@ -175,7 +244,14 @@ export const CalendarScreen: React.FC = () => {
   const handleDateSelect = (day: any) => {
     const dateStr = day.dateString;
     setSelectedDate(dateStr);
-    filterActivitiesByDate(dateStr);
+    // Use the optimized API call for better performance
+    loadActivitiesForDate(dateStr);
+  };
+
+  const handleMonthChange = (month: any) => {
+    // Load activities for the new month when user navigates
+    const monthDateStr = `${month.year}-${String(month.month).padStart(2, '0')}-01`;
+    loadActivitiesForMonth(monthDateStr);
   };
 
   const handleAddActivity = () => {
@@ -194,21 +270,41 @@ export const CalendarScreen: React.FC = () => {
   };
 
   const navigateToActivityCreation = (petId: number) => {
-    // For now, we'll show an alert. In a full implementation, you'd navigate to the activity wizard
-    // navigation.navigate('ActivityWizard', { 
-    //   screen: 'SelectType', 
-    //   params: { petId, preselectedDate: selectedDate } 
-    // });
-    Alert.alert(
-      'Add Activity',
-      `This would open the activity creation wizard for pet ID ${petId} with date ${selectedDate}. Implementation needed in navigation.`
+    // Use CommonActions for nested navigation across tabs
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'Home',
+        params: {
+          screen: 'ActivityWizard',
+          params: {
+            screen: 'SelectType',
+            params: { 
+              petId, 
+              preselectedDate: selectedDate 
+            }
+          }
+        }
+      })
     );
   };
 
   const handleEditActivity = (activity: ActivityRecord) => {
-    Alert.alert(
-      'Edit Activity',
-      `This would open the edit screen for activity: ${activity.title}. Implementation needed.`
+    // Use CommonActions for nested navigation across tabs for editing
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'Home',
+        params: {
+          screen: 'ActivityWizard',
+          params: {
+            screen: 'SelectType',
+            params: { 
+              petId: activity.pet_id,
+              editActivity: activity,
+              preselectedDate: selectedDate
+            }
+          }
+        }
+      })
     );
   };
 
@@ -286,6 +382,7 @@ export const CalendarScreen: React.FC = () => {
             <Calendar
               current={selectedDate}
               onDayPress={handleDateSelect}
+              onMonthChange={handleMonthChange}
               markedDates={{
                 ...markedDates,
                 [selectedDate]: {
