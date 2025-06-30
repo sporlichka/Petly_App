@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Enum, Float
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Enum, Float, Boolean
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 import enum
@@ -20,6 +20,7 @@ class ActivityRecord(Base):
     date = Column(DateTime, nullable=False)
     time = Column(DateTime, nullable=False)
     repeat = Column(String, nullable=True)  # например: "daily", "weekly", "monthly"
+    notify = Column(Boolean, default=True, nullable=False)  # отдельное поле для уведомлений
     notes = Column(Text, nullable=True)
     
     # Специфичные поля для feeding

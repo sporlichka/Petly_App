@@ -63,26 +63,47 @@ def get_activity_record(
         )
     return record
 
-@router.put("/{record_id}", response_model=ActivityRecordRead)
+@router.patch("/{record_id}", response_model=ActivityRecordRead)
 def update_activity_record(
     record_id: int,
     record_update: ActivityRecordUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Обновить запись активности"""
-    record = ActivityRecordService.update_record(
-        db=db, 
-        record_id=record_id, 
-        record_update=record_update,
-        current_user=current_user
-    )
-    if not record:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied or record not found"
+    """Частично обновить запись активности"""
+    try:
+        print(f"=== ROUTER PATCH DEBUG ===")
+        print(f"Record ID: {record_id}")
+        print(f"Update data received: {record_update}")
+        print(f"Update data dict: {record_update.dict()}")
+        print(f"Update data dict (exclude_unset=True): {record_update.dict(exclude_unset=True)}")
+        
+        record = ActivityRecordService.update_record(
+            db=db, 
+            record_id=record_id, 
+            record_update=record_update,
+            current_user=current_user
         )
-    return record
+        if not record:
+            print(f"Record not found or access denied for ID: {record_id}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied or record not found"
+            )
+        
+        print(f"Successfully updated record: {record}")
+        return record
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Unexpected error in update_activity_record: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 @router.delete("/{record_id}")
 def delete_activity_record(

@@ -14,6 +14,7 @@ class ActivityRecordBase(BaseModel):
     date: datetime
     time: datetime
     repeat: Optional[str] = None
+    notify: bool = True
     notes: Optional[str] = None
     food_type: Optional[str] = None
     quantity: Optional[float] = None
@@ -27,6 +28,7 @@ class ActivityRecordUpdate(BaseModel):
     date: Optional[datetime] = None
     time: Optional[datetime] = None
     repeat: Optional[str] = None
+    notify: Optional[bool] = None
     notes: Optional[str] = None
     food_type: Optional[str] = None
     quantity: Optional[float] = None
