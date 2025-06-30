@@ -12,7 +12,7 @@ class ActivityRecord(Base):
     __tablename__ = "activity_records"
 
     id = Column(Integer, primary_key=True, index=True)
-    pet_id = Column(Integer, ForeignKey("pets.id"), nullable=False)
+    pet_id = Column(Integer, ForeignKey("pets.id", ondelete="CASCADE"), nullable=False)
     category = Column(Enum(ActivityCategory), nullable=False)
     
     # Универсальные поля

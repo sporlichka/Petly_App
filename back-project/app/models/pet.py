@@ -21,4 +21,4 @@ class Pet(Base):
     notes = Column(Text, nullable=True)
 
     owner = relationship("User", back_populates="pets")
-    activity_records = relationship("ActivityRecord", back_populates="pet") 
+    activity_records = relationship("ActivityRecord", back_populates="pet", cascade="all, delete-orphan") 
