@@ -25,7 +25,8 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId } = route.params;
+  const { petId, editActivity } = route.params;
+  const isEditMode = !!editActivity;
 
   const activityTypes = [
     {
@@ -52,8 +53,49 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
   ];
 
   const handleSelectType = (category: ActivityCategory) => {
-    navigation.navigate('FillDetails', { petId, category });
+    // In edit mode, pre-populate the form data
+    const initialData = isEditMode ? {
+      title: editActivity.title,
+      notes: editActivity.notes || '',
+      food_type: editActivity.food_type || '',
+      quantity: editActivity.quantity?.toString() || '',
+      duration: '', // Not stored in current model
+      weight: '', // Not stored in current model  
+      temperature: '', // Not stored in current model
+    } : undefined;
+
+    navigation.navigate('FillDetails', { 
+      petId, 
+      category,
+      editActivity,
+      activityData: initialData
+    });
   };
+
+  // In edit mode, skip type selection and go directly to details
+  React.useEffect(() => {
+    if (isEditMode && editActivity) {
+      handleSelectType(editActivity.category);
+    }
+  }, [isEditMode, editActivity]);
+
+  // If in edit mode, show loading while auto-navigating
+  if (isEditMode) {
+    return (
+      <LinearGradient
+        colors={Colors.gradient.background as any}
+        style={styles.container}
+      >
+        <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Loading activity...</Text>
+            </View>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient

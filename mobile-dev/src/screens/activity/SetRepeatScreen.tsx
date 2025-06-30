@@ -30,11 +30,27 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, activityData } = route.params;
+  const { petId, category, editActivity, activityData } = route.params;
+  const isEditMode = !!editActivity;
   
-  const [repeatData, setRepeatData] = useState<RepeatData>({
-    repeat: 'none',
-    notifications: false,
+  const [repeatData, setRepeatData] = useState<RepeatData>(() => {
+    // Pre-populate with existing data if in edit mode
+    if (isEditMode && editActivity) {
+      // Validate repeat value to ensure it matches expected types
+      const validRepeatValues: Array<'none' | 'daily' | 'weekly' | 'monthly'> = ['none', 'daily', 'weekly', 'monthly'];
+      const repeat = validRepeatValues.includes(editActivity.repeat as any) 
+        ? (editActivity.repeat as 'none' | 'daily' | 'weekly' | 'monthly')
+        : 'none';
+      
+      return {
+        repeat,
+        notifications: editActivity.notify || false,
+      };
+    }
+    return {
+      repeat: 'none',
+      notifications: false,
+    };
   });
 
   const getCategoryInfo = () => {
@@ -93,7 +109,8 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
     
     navigation.navigate('Confirmation', { 
       petId, 
-      category, 
+      category,
+      editActivity,
       activityData: finalData 
     });
   };
@@ -112,9 +129,14 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
             <View style={[styles.categoryIcon, { backgroundColor: categoryInfo.color + '20' }]}>
               <Text style={styles.emoji}>{categoryInfo.emoji}</Text>
             </View>
-            <Text style={styles.title}>Repeat this activity?</Text>
+            <Text style={styles.title}>
+              {isEditMode ? 'Update repeat settings' : 'Set repeat schedule'}
+            </Text>
             <Text style={styles.subtitle}>
-              Set up recurring activities and notifications
+              {isEditMode 
+                ? 'Modify how often this activity repeats'
+                : 'Choose how often this activity should repeat'
+              }
             </Text>
           </View>
 

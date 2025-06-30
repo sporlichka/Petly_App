@@ -60,10 +60,14 @@ export interface ActivityRecord {
   title: string;
   date: string; // ISO datetime string
   time: string; // ISO datetime string
-  repeat?: string;
+  repeat?: string | null;
+  notify: boolean;
   notes?: string;
   food_type?: string; // Only for feeding category
-  quantity?: number; // Only for feeding category
+  quantity?: string; // Changed to string for "2 cups", "200g", etc.
+  duration?: string; // Only for activity category
+  temperature?: number; // Only for health category
+  weight?: number; // Only for health category
 }
 
 export interface ActivityRecordCreate {
@@ -72,20 +76,28 @@ export interface ActivityRecordCreate {
   title: string;
   date: string;
   time: string;
-  repeat?: string;
+  repeat?: string | null;
+  notify?: boolean;
   notes?: string;
   food_type?: string;
-  quantity?: number;
+  quantity?: string;
+  duration?: string;
+  temperature?: number;
+  weight?: number;
 }
 
 export interface ActivityRecordUpdate {
   title?: string;
   date?: string;
   time?: string;
-  repeat?: string;
+  repeat?: string | null;
+  notify?: boolean;
   notes?: string;
   food_type?: string;
-  quantity?: number;
+  quantity?: string;
+  duration?: string;
+  temperature?: number;
+  weight?: number;
 }
 
 // AI Chat types
@@ -133,6 +145,8 @@ export type HomeStackParamList = {
   PetList: undefined;
   PetDetail: { petId: number };
   AddPet: undefined;
+  EditPet: { petId: number };
+  ViewAllActivities: { petId: number };
   ActivityWizard: { screen: keyof ActivityStackParamList; params: any };
 };
 
@@ -148,11 +162,11 @@ export type OnboardingStackParamList = {
 };
 
 export type ActivityStackParamList = {
-  SelectType: { petId: number };
-  FillDetails: { petId: number; category: ActivityCategory };
-  SelectDateTime: { petId: number; category: ActivityCategory; activityData: any };
-  SetRepeat: { petId: number; category: ActivityCategory; activityData: any };
-  Confirmation: { petId: number; category: ActivityCategory; activityData: any };
+  SelectType: { petId: number; editActivity?: ActivityRecord };
+  FillDetails: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData?: any };
+  SelectDateTime: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData: any };
+  SetRepeat: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData: any };
+  Confirmation: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData: any };
 };
 
 // Form types

@@ -5,13 +5,15 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { HomeStackParamList, Pet } from '../../types';
+import { HomeStackParamList, Pet, ActivityRecord } from '../../types';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Colors } from '../../constants/Colors';
@@ -31,12 +33,23 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
 }) => {
   const { petId } = route.params;
   const [pet, setPet] = useState<Pet | null>(null);
+  const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isActivitiesLoading, setIsActivitiesLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadPetDetails();
+    loadRecentActivities();
   }, [petId]);
+
+  // Refresh pet details and activities when returning from edit screen or activity wizard
+  useFocusEffect(
+    React.useCallback(() => {
+      loadPetDetails();
+      loadRecentActivities();
+    }, [petId])
+  );
 
   const loadPetDetails = async () => {
     try {
@@ -49,6 +62,19 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
       navigation.goBack();
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadRecentActivities = async () => {
+    try {
+      setIsActivitiesLoading(true);
+      const recentActivities = await apiService.getActivityRecords(petId, undefined, 0, 5);
+      setActivities(recentActivities);
+    } catch (error) {
+      console.error('Failed to load activities:', error);
+      // Don't show alert for activities failure, just log it
+    } finally {
+      setIsActivitiesLoading(false);
     }
   };
 
@@ -75,6 +101,111 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
     });
   };
 
+  const formatActivityDateTime = (dateString: string): string => {
+    try {
+      // The backend sends datetime strings without timezone info like "2025-06-28T18:34:00"
+      // We need to parse this as local time to avoid timezone conversion issues
+      
+      // Parse the date components manually to ensure local time interpretation
+      const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
+      if (!dateMatch) {
+        console.error('Invalid date format:', dateString);
+        return 'Invalid date';
+      }
+      
+      const [, year, month, day, hour, minute, second] = dateMatch;
+      
+      // Create date as local time (months are 0-indexed in JavaScript)
+      const date = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute),
+        parseInt(second)
+      );
+      
+      const now = new Date();
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error('Invalid parsed date:', dateString);
+        return 'Invalid date';
+      }
+      
+      const diffInMs = now.getTime() - date.getTime();
+      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+      const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+      
+      console.log('Activity date string:', dateString);
+      console.log('Parsed date (local):', date.toString());
+      console.log('Now:', now.toString());
+      console.log('Diff in ms:', diffInMs);
+      console.log('Diff in minutes:', diffInMinutes);
+      console.log('Diff in hours:', diffInHours);
+      
+      // Handle negative differences (future dates)
+      if (diffInMs < 0) {
+        return 'Future';
+      }
+      
+      // Less than 1 minute
+      if (diffInMinutes < 1) {
+        return 'Just now';
+      }
+      
+      // Less than 60 minutes
+      if (diffInMinutes < 60) {
+        return `${diffInMinutes} min ago`;
+      }
+      
+      // Less than 24 hours
+      if (diffInHours < 24) {
+        return `${diffInHours}h ago`;
+      }
+      
+      // Less than 48 hours
+      if (diffInHours < 48) {
+        return 'Yesterday';
+      }
+      
+      // Older activities
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, dateString);
+      return 'Unknown time';
+    }
+  };
+
+  const getActivityIcon = (category: string): string => {
+    switch (category) {
+      case 'FEEDING':
+        return '🥣';
+      case 'HEALTH':
+        return '🩺';
+      case 'ACTIVITY':
+        return '🎾';
+      default:
+        return '📝';
+    }
+  };
+
+  const getActivityColor = (category: string): string => {
+    switch (category) {
+      case 'FEEDING':
+        return Colors.feeding;
+      case 'HEALTH':
+        return Colors.health;
+      case 'ACTIVITY':
+        return Colors.activity;
+      default:
+        return Colors.primary;
+    }
+  };
+
   const handleAddActivity = () => {
     navigation.navigate('ActivityWizard', {
       screen: 'SelectType',
@@ -83,8 +214,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
   };
 
   const handleEditPet = () => {
-    Alert.alert('Edit Pet', 'Navigate to edit pet screen');
-    // TODO: Navigate to edit pet screen
+    navigation.navigate('EditPet', { petId: pet!.id });
   };
 
   const handleDeletePet = () => {
@@ -126,6 +256,81 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
     if (lowerSpecies.includes('rabbit')) return '🐰';
     if (lowerSpecies.includes('fish')) return '🐟';
     return '🐾';
+  };
+
+  const handleViewAllActivities = () => {
+    navigation.navigate('ViewAllActivities', { petId });
+  };
+
+  const renderActivityItem = (activity: ActivityRecord) => {
+    const activityColor = getActivityColor(activity.category);
+    
+    return (
+      <View key={activity.id} style={styles.activityItem}>
+        <View style={[styles.activityIcon, { backgroundColor: activityColor + '20' }]}>
+          <Text style={styles.activityEmoji}>{getActivityIcon(activity.category)}</Text>
+        </View>
+        <View style={styles.activityContent}>
+          <Text style={styles.activityTitle}>{activity.title}</Text>
+          <Text style={styles.activityTime}>{formatActivityDateTime(activity.date)}</Text>
+          
+          {/* Show feeding-specific details */}
+          {activity.category === 'FEEDING' && (activity.food_type || activity.quantity) && (
+            <View style={styles.activityDetails}>
+              {activity.food_type && (
+                <Text style={styles.activityDetail}>🍽️ {activity.food_type}</Text>
+              )}
+              {activity.quantity && (
+                <Text style={styles.activityDetail}>📏 {activity.quantity}</Text>
+              )}
+            </View>
+          )}
+          
+          {activity.notes && (
+            <Text style={styles.activityNotes} numberOfLines={1}>
+              {activity.notes}
+            </Text>
+          )}
+        </View>
+        <View style={[styles.activityDot, { backgroundColor: activityColor }]} />
+      </View>
+    );
+  };
+
+  const renderActivitiesSection = () => {
+    if (isActivitiesLoading) {
+      return (
+        <View style={styles.activitiesLoading}>
+          <Text style={styles.loadingText}>Loading activities... 📝</Text>
+        </View>
+      );
+    }
+
+    if (activities.length === 0) {
+      return (
+        <View style={styles.emptyActivities}>
+          <Text style={styles.emptyText}>📝</Text>
+          <Text style={styles.emptyTitle}>No activities yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Start tracking {pet?.name}'s daily activities
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.activitiesList}>
+        {activities.map(renderActivityItem)}
+        {activities.length > 0 && (
+          <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllActivities}>
+            <Text style={styles.viewAllText}>
+              {activities.length === 1 ? 'View Activity Details' : `View All ${activities.length} Activities`}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+          </TouchableOpacity>
+        )}
+      </View>
+    );
   };
 
   if (isLoading) {
@@ -226,16 +431,10 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
           style={styles.addActivityButton}
         />
 
-        {/* Recent Activities Preview */}
+        {/* Recent Activities */}
         <Card variant="default" style={styles.activitiesCard}>
           <Text style={styles.sectionTitle}>Recent Activities</Text>
-          <View style={styles.emptyActivities}>
-            <Text style={styles.emptyText}>📝</Text>
-            <Text style={styles.emptyTitle}>No activities yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Start tracking {pet.name}'s daily activities
-            </Text>
-          </View>
+          {renderActivitiesSection()}
         </Card>
 
         {/* Action Buttons */}
@@ -375,6 +574,10 @@ const styles = StyleSheet.create({
   activitiesCard: {
     marginBottom: 24,
   },
+  activitiesLoading: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
   emptyActivities: {
     alignItems: 'center',
     paddingVertical: 32,
@@ -394,6 +597,64 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
   },
+  activitiesList: {
+    gap: 12,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  activityIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityEmoji: {
+    fontSize: 20,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  activityTime: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  activityNotes: {
+    fontSize: 12,
+    color: Colors.textLight,
+    fontStyle: 'italic',
+  },
+  activityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginRight: 4,
+  },
   actionButtons: {
     flexDirection: 'row',
     gap: 12,
@@ -407,5 +668,15 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: Colors.error,
+  },
+  activityDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  activityDetail: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginRight: 4,
   },
 }); 

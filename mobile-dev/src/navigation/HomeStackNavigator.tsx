@@ -6,6 +6,8 @@ import { Colors } from '../constants/Colors';
 import { HomeScreen } from '../screens/main/HomeScreen';
 import { PetDetailScreen } from '../screens/main/PetDetailScreen';
 import { AddPetScreen } from '../screens/main/AddPetScreen';
+import { EditPetScreen } from '../screens/main/EditPetScreen';
+import { ViewAllActivitiesScreen } from '../screens/main/ViewAllActivitiesScreen';
 import { ActivityStackNavigator } from './ActivityStackNavigator';
 
 const Stack = createStackNavigator<HomeStackParamList>();
@@ -48,6 +50,22 @@ export const HomeStackNavigator: React.FC = () => {
         component={AddPetScreen}
         options={{
           title: 'Add New Pet',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen 
+        name="EditPet" 
+        component={EditPetScreen}
+        options={{
+          title: 'Edit Pet',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen 
+        name="ViewAllActivities" 
+        component={ViewAllActivitiesScreen}
+        options={{
+          title: 'All Activities',
           headerShown: true,
         }}
       />

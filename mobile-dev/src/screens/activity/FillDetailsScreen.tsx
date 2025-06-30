@@ -31,16 +31,23 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category } = route.params;
+  const { petId, category, editActivity, activityData: initialData } = route.params;
+  const isEditMode = !!editActivity;
   
-  const [formData, setFormData] = useState<ActivityFormData>({
-    title: '',
-    notes: '',
-    food_type: '',
-    quantity: '',
-    duration: '',
-    weight: '',
-    temperature: '',
+  const [formData, setFormData] = useState<ActivityFormData>(() => {
+    // Pre-populate form data if in edit mode
+    if (isEditMode && initialData) {
+      return initialData;
+    }
+    return {
+      title: '',
+      notes: '',
+      food_type: '',
+      quantity: '',
+      duration: '',
+      weight: '',
+      temperature: '',
+    };
   });
   
   const [errors, setErrors] = useState<Partial<ActivityFormData>>({});
@@ -50,23 +57,27 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
       case 'FEEDING':
         return {
           emoji: '🥣',
-          title: 'Feeding Details',
+          title: isEditMode ? 'Edit Feeding Details' : 'Feeding Details',
           color: Colors.feeding,
         };
       case 'HEALTH':
         return {
           emoji: '🩺',
-          title: 'Health Details',
+          title: isEditMode ? 'Edit Health Details' : 'Health Details',
           color: Colors.health,
         };
       case 'ACTIVITY':
         return {
           emoji: '🎾',
-          title: 'Activity Details',
+          title: isEditMode ? 'Edit Activity Details' : 'Activity Details',
           color: Colors.activity,
         };
       default:
-        return { emoji: '📝', title: 'Activity Details', color: Colors.primary };
+        return { 
+          emoji: '📝', 
+          title: isEditMode ? 'Edit Activity Details' : 'Activity Details', 
+          color: Colors.primary 
+        };
     }
   };
 
@@ -96,7 +107,8 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
     
     navigation.navigate('SelectDateTime', { 
       petId, 
-      category, 
+      category,
+      editActivity,
       activityData: formData 
     });
   };

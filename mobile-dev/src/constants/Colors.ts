@@ -29,6 +29,9 @@ export const Colors = {
   error: '#F44336',
   info: '#2196F3',
   
+  // Additional background
+  backgroundLight: '#F8F8F8',
+  
   // UI elements
   border: '#E0E0E0',
   borderLight: '#F5F5F5',

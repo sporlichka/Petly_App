@@ -173,7 +173,7 @@ class ApiService {
     recordData: ActivityRecordUpdate
   ): Promise<ActivityRecord> {
     return this.request<ActivityRecord>(`/records/${recordId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(recordData),
     });
   }

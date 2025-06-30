@@ -29,11 +29,21 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, activityData } = route.params;
+  const { petId, category, editActivity, activityData } = route.params;
+  const isEditMode = !!editActivity;
   
-  const [dateTimeData, setDateTimeData] = useState<DateTimeData>({
-    date: new Date(),
-    time: new Date(),
+  const [dateTimeData, setDateTimeData] = useState<DateTimeData>(() => {
+    // Pre-populate with existing data if in edit mode
+    if (isEditMode && editActivity) {
+      return {
+        date: new Date(editActivity.date),
+        time: new Date(editActivity.time),
+      };
+    }
+    return {
+      date: new Date(),
+      time: new Date(),
+    };
   });
   
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -86,16 +96,22 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     
     return [
       { label: 'Now', time: now },
       { label: '1 hour ago', time: oneHourAgo },
       { label: '2 hours ago', time: twoHoursAgo },
+      { label: 'In 1 hour', time: oneHourLater },
+      { label: 'In 2 hours', time: twoHoursLater },
     ];
   };
 
   const handleQuickTimeSelect = (time: Date) => {
-    setDateTimeData(prev => ({ ...prev, time, date: new Date() }));
+    // When selecting a future time, also set the date to today if it's not already set to future
+    const selectedDate = time > new Date() ? new Date() : dateTimeData.date;
+    setDateTimeData(prev => ({ ...prev, time, date: selectedDate }));
   };
 
   const handleNext = () => {
@@ -106,7 +122,8 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
     
     navigation.navigate('SetRepeat', { 
       petId, 
-      category, 
+      category,
+      editActivity,
       activityData: combinedDateTime 
     });
   };
@@ -125,9 +142,11 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
             <View style={[styles.categoryIcon, { backgroundColor: categoryInfo.color + '20' }]}>
               <Text style={styles.emoji}>{categoryInfo.emoji}</Text>
             </View>
-            <Text style={styles.title}>When did this happen?</Text>
+            <Text style={styles.title}>
+              {isEditMode ? 'Update date and time' : 'When does this happen?'}
+            </Text>
             <Text style={styles.subtitle}>
-              Select the date and time for this activity
+              {isEditMode ? 'Modify the date and time for this activity' : 'Select when this activity occurred or will occur'}
             </Text>
           </View>
 
@@ -206,7 +225,6 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
               mode="date"
               display="default"
               onChange={handleDateChange}
-              maximumDate={new Date()}
             />
           )}
 
@@ -275,18 +293,19 @@ const styles = StyleSheet.create({
   },
   presetsContainer: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   presetButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     backgroundColor: Colors.primaryLight,
-    borderRadius: 12,
+    borderRadius: 10,
     gap: 6,
+    minWidth: '30%',
   },
   presetText: {
     fontSize: 14,

@@ -12,7 +12,7 @@ import { RouteProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ActivityStackParamList, ActivityRecordCreate } from '../../types';
+import { ActivityStackParamList, ActivityRecordCreate, ActivityRecordUpdate } from '../../types';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Colors } from '../../constants/Colors';
@@ -30,8 +30,9 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, activityData } = route.params;
+  const { petId, category, editActivity, activityData } = route.params;
   const [isSaving, setIsSaving] = useState(false);
+  const isEditMode = !!editActivity;
 
   const getCategoryInfo = () => {
     switch (category) {
@@ -102,35 +103,86 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
         time.getMinutes()
       );
       
-      const activityRecord: ActivityRecordCreate = {
-        pet_id: petId,
-        category,
-        title: activityData.title,
-        date: combined.toISOString(), // Full ISO datetime
-        time: combined.toISOString(), // Full ISO datetime (same as date for now)
-        repeat: activityData.repeat === 'none' ? undefined : activityData.repeat,
-        notes: activityData.notes || undefined,
-        food_type: activityData.food_type || undefined,
-        quantity: activityData.quantity ? parseFloat(activityData.quantity) : undefined,
+      // Format datetime as local time string (YYYY-MM-DDTHH:mm:ss) to avoid timezone conversion
+      const formatLocalDateTime = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
       };
-
-      console.log('Sending activity record:', activityRecord);
-      await apiService.createActivityRecord(activityRecord);
       
-      // Show success message
-      Alert.alert(
-        'Activity Saved! 🎉',
-        `${activityData.title} has been added to your pet's activity log.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate back to the home stack, specifically to PetDetail
-              navigation.getParent()?.goBack();
+      const localDateTimeString = formatLocalDateTime(combined);
+      
+      if (isEditMode && editActivity) {
+        // Update existing activity
+        const activityUpdate: ActivityRecordUpdate = {
+          title: activityData.title,
+          date: localDateTimeString,
+          time: localDateTimeString,
+          repeat: activityData.repeat === 'none' ? undefined : activityData.repeat,
+          notify: activityData.notifications || true,
+          notes: activityData.notes || undefined,
+          food_type: activityData.food_type || undefined,
+          quantity: activityData.quantity || undefined,
+          duration: activityData.duration || undefined,
+          temperature: activityData.temperature ? parseFloat(activityData.temperature) : undefined,
+          weight: activityData.weight ? parseFloat(activityData.weight) : undefined,
+        };
+
+        console.log('Updating activity record:', activityUpdate);
+        await apiService.updateActivityRecord(editActivity.id, activityUpdate);
+        
+        Alert.alert(
+          'Activity Updated! ✅',
+          `${activityData.title} has been successfully updated.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate back to activities list
+                navigation.getParent()?.goBack();
+              }
             }
-          }
-        ]
-      );
+          ]
+        );
+      } else {
+        // Create new activity
+        const activityRecord: ActivityRecordCreate = {
+          pet_id: petId,
+          category,
+          title: activityData.title,
+          date: localDateTimeString,
+          time: localDateTimeString,
+          repeat: activityData.repeat === 'none' ? undefined : activityData.repeat,
+          notify: activityData.notifications || true,
+          notes: activityData.notes || undefined,
+          food_type: activityData.food_type || undefined,
+          quantity: activityData.quantity || undefined,
+          duration: activityData.duration || undefined,
+          temperature: activityData.temperature ? parseFloat(activityData.temperature) : undefined,
+          weight: activityData.weight ? parseFloat(activityData.weight) : undefined,
+        };
+
+        console.log('Creating activity record:', activityRecord);
+        await apiService.createActivityRecord(activityRecord);
+        
+        Alert.alert(
+          'Activity Saved! 🎉',
+          `${activityData.title} has been added to your pet's activity log.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate back to the home stack, specifically to PetDetail
+                navigation.getParent()?.goBack();
+              }
+            }
+          ]
+        );
+      }
     } catch (error) {
       console.error('Failed to save activity:', error);
       Alert.alert(
@@ -160,9 +212,14 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
             <View style={[styles.categoryIcon, { backgroundColor: categoryInfo.color + '20' }]}>
               <Text style={styles.emoji}>{categoryInfo.emoji}</Text>
             </View>
-            <Text style={styles.title}>Review & Save</Text>
+            <Text style={styles.title}>
+              {isEditMode ? 'Review Changes' : 'Review & Save'}
+            </Text>
             <Text style={styles.subtitle}>
-              Check the details and save this activity
+              {isEditMode 
+                ? 'Check the updated details and save changes'
+                : 'Check the details and save this activity'
+              }
             </Text>
           </View>
 
@@ -276,7 +333,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
 
           {/* Save Button */}
           <Button
-            title="Save Activity"
+            title={isEditMode ? "Update Activity" : "Save Activity"}
             onPress={handleSaveActivity}
             loading={isSaving}
             size="large"
