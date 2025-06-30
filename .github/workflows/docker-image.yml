@@ -11,9 +11,9 @@ jobs:
     environment: production
 
     steps:
-      - name: 🧹 Cleanup all pycache folders before checkout
+      - name: 🧹 Cleanup all __pycache__ folders before checkout
         run: |
-          sudo find /home/Tabchny/actions-runner/_work/Vetly-AI-Backend -name 'pycache' -type d -exec rm -rf {} +
+          sudo find /home/Tabchny/actions-runner/_work/Vetly-AI-Backend -name '__pycache__' -type d -exec rm -rf {} +
 
       - name: 📦 Checkout repository
         uses: actions/checkout@v3
