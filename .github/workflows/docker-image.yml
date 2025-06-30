@@ -1,0 +1,30 @@
+name: 🚀 Deploy FastAPI Backend with Docker Compose
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: production
+
+    steps:
+      - name: 🧹 Cleanup all pycache folders before checkout
+        run: |
+          sudo find /home/Tabchny/actions-runner/_work/Vetly-AI-Backend -name 'pycache' -type d -exec rm -rf {} +
+
+      - name: 📦 Checkout repository
+        uses: actions/checkout@v3
+
+      - name: 📄 Create .env file
+        run: |
+          echo "$BACK_ENV" > ./back-project/.env
+          cat ./back-project/.env
+
+      - name: 🐳 Docker Compose - build & run
+        run: |
+          cd back-project
+          sudo docker compose down
+          sudo docker compose up -d --build
