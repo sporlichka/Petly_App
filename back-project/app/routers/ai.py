@@ -6,6 +6,7 @@ from app.models.user import User
 from google.genai import types
 from typing import List, Optional
 import uuid
+import re
 from app.services.ai_data_service import get_user_pets, PetInfo
 from sqlalchemy.orm import Session
 from app.ai.data_api import AIAgentDataAPI
@@ -125,14 +126,46 @@ async def list_ai_session_messages(session_id: str, current_user: User = Depends
             user_id=str(current_user.id),
             session_id=session_id
         )
-        return [
-            EventResponse(
+        
+        messages = []
+        for e in session.events:
+            # Extract content text properly
+            content_text = None
+            if hasattr(e, 'content') and e.content:
+                if hasattr(e.content, 'parts') and e.content.parts:
+                    content_text = e.content.parts[0].text if e.content.parts[0] else None
+                elif isinstance(e.content, str):
+                    content_text = e.content
+            
+            # Clean user messages from pet context information
+            author = getattr(e, 'author', None)
+            if content_text and author == 'user':
+                # Remove the pet summary prefix that was added for AI context
+                # Pattern to match "User's pets:\n- ... \n\n" at the beginning
+                pet_pattern = r"^User's pets:\n.*?\n\n"
+                content_text = re.sub(pet_pattern, '', content_text, flags=re.DOTALL)
+                
+                # Also handle case where user has no pets
+                no_pets_pattern = r"^User has no pets registered\.\n\n"
+                content_text = re.sub(no_pets_pattern, '', content_text)
+            
+            # Convert timestamp to string properly
+            timestamp_str = None
+            if hasattr(e, 'timestamp') and e.timestamp:
+                if isinstance(e.timestamp, (int, float)):
+                    from datetime import datetime
+                    timestamp_str = datetime.fromtimestamp(e.timestamp).isoformat()
+                else:
+                    timestamp_str = str(e.timestamp)
+            
+            messages.append(EventResponse(
                 id=str(e.id),
-                author=getattr(e, 'author', None),
-                content=getattr(e, 'content', None),
-                timestamp=getattr(e, 'timestamp', None)
-            ) for e in session.events
-        ]
+                author=author,
+                content=content_text,
+                timestamp=timestamp_str
+            ))
+        
+        return messages
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing session messages: {str(e)}")
 

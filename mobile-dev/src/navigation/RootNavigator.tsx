@@ -7,6 +7,7 @@ import { MainNavigator } from './MainNavigator';
 import { OnboardingNavigator } from './OnboardingNavigator';
 import { apiService } from '../services/api';
 import { Colors } from '../constants/Colors';
+import { notificationService } from '../services/notificationService';
 
 export const RootNavigator: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -14,8 +15,28 @@ export const RootNavigator: React.FC = () => {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
 
   useEffect(() => {
-    checkAuthStatus();
+    initializeApp();
   }, []);
+
+  const initializeApp = async () => {
+    // Initialize notification service (LOCAL notifications only)
+    try {
+      console.log('🔔 Attempting to initialize LOCAL notification service...');
+      const notificationInitialized = await notificationService.initialize();
+      if (notificationInitialized) {
+        console.log('✅ LOCAL notification service initialized successfully');
+      } else {
+        console.log('⚠️ LOCAL notification service not available (this is normal in simulators)');
+      }
+    } catch (error) {
+      console.error('❌ LOCAL notification service initialization failed:', error);
+      // Don't block app startup for notification initialization failures
+      // This is expected in Expo Go or simulators
+    }
+
+    // Check authentication status
+    await checkAuthStatus();
+  };
 
   const checkAuthStatus = async () => {
     try {

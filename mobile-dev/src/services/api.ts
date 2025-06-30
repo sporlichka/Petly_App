@@ -55,7 +55,6 @@ class ApiService {
         await this.handleUnauthorized();
         throw new Error('Authentication expired. Please log in again.');
       }
-
       // Check if response is ok
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
@@ -291,7 +290,7 @@ class ApiService {
       author: event.author,
       content: event.content,
       timestamp: event.timestamp,
-      isUser: event.author === 'user', // Adjust based on your backend logic
+      isUser: event.author === 'user' || event.author === 'human', // Check for user/human author
     }));
   }
 

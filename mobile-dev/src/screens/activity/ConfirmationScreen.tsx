@@ -17,6 +17,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
+import { useActivityNotifications } from '../../hooks/useActivityNotifications';
 
 type ConfirmationScreenNavigationProp = StackNavigationProp<ActivityStackParamList, 'Confirmation'>;
 type ConfirmationScreenRouteProp = RouteProp<ActivityStackParamList, 'Confirmation'>;
@@ -33,6 +34,13 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   const { petId, category, editActivity, activityData, preselectedDate } = route.params;
   const [isSaving, setIsSaving] = useState(false);
   const isEditMode = !!editActivity;
+
+  // Initialize notification hook
+  const {
+    scheduleActivityNotification,
+    rescheduleActivityNotification,
+    cancelActivityNotification,
+  } = useActivityNotifications();
 
   const getCategoryInfo = () => {
     switch (category) {
@@ -133,11 +141,27 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
         };
 
         console.log('Updating activity record:', activityUpdate);
-        await apiService.updateActivityRecord(editActivity.id, activityUpdate);
+        const updatedActivity = await apiService.updateActivityRecord(editActivity.id, activityUpdate);
+        
+        // Handle notification scheduling for updated activity
+        try {
+          if (activityData.notifications) {
+            // Reschedule notification with new data
+            const notificationScheduled = await rescheduleActivityNotification(updatedActivity);
+            console.log(`Notification ${notificationScheduled ? 'scheduled' : 'failed'} for updated activity ${updatedActivity.id}`);
+          } else {
+            // Cancel notification if notifications are disabled
+            await cancelActivityNotification(editActivity.id);
+            console.log(`Cancelled notification for activity ${editActivity.id}`);
+          }
+        } catch (notificationError) {
+          console.error('Failed to handle notifications for updated activity:', notificationError);
+          // Don't block the success flow for notification errors
+        }
         
         Alert.alert(
           'Activity Updated! ✅',
-          `${activityData.title} has been successfully updated.`,
+          `${activityData.title} has been successfully updated.${activityData.notifications ? '\n\n📱 Reminder has been updated!' : ''}`,
           [
             {
               text: 'OK',
@@ -167,11 +191,22 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
         };
 
         console.log('Creating activity record:', activityRecord);
-        await apiService.createActivityRecord(activityRecord);
+        const createdActivity = await apiService.createActivityRecord(activityRecord);
+        
+        // Handle notification scheduling for new activity
+        try {
+          if (activityData.notifications) {
+            const notificationScheduled = await scheduleActivityNotification(createdActivity);
+            console.log(`Notification ${notificationScheduled ? 'scheduled' : 'failed'} for new activity ${createdActivity.id}`);
+          }
+        } catch (notificationError) {
+          console.error('Failed to schedule notification for new activity:', notificationError);
+          // Don't block the success flow for notification errors
+        }
         
         Alert.alert(
           'Activity Saved! 🎉',
-          `${activityData.title} has been added to your pet's activity log.`,
+          `${activityData.title} has been added to your pet's activity log.${activityData.notifications ? '\n\n📱 Reminder has been set!' : ''}`,
           [
             {
               text: 'OK',

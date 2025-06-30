@@ -7,12 +7,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 
 import { User } from '../../types';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
+import { notificationService } from '../../services/notificationService';
+import { useActivityNotifications } from '../../hooks/useActivityNotifications';
 
 interface SettingsScreenProps {
   onLogout: () => void;
@@ -21,9 +24,15 @@ interface SettingsScreenProps {
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
+  const [scheduledCount, setScheduledCount] = useState(0);
+  const [isTestingNotification, setIsTestingNotification] = useState(false);
+
+  const { getAllScheduledCount } = useActivityNotifications();
 
   useEffect(() => {
     loadUserInfo();
+    loadNotificationStatus();
   }, []);
 
   const loadUserInfo = async () => {
@@ -38,6 +47,118 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
       }
     } catch (error) {
       console.error('Failed to load user info:', error);
+    }
+  };
+
+  const loadNotificationStatus = async () => {
+    try {
+      const enabled = await notificationService.isNotificationEnabled();
+      setNotificationEnabled(enabled);
+      
+      if (enabled) {
+        const count = await getAllScheduledCount();
+        setScheduledCount(count);
+      }
+    } catch (error) {
+      console.error('Failed to load notification status:', error);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      setIsTestingNotification(true);
+      
+      // Schedule a test notification for 5 seconds from now
+      const testTime = new Date();
+      testTime.setSeconds(testTime.getSeconds() + 5);
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🐾 Test Notification',
+          body: 'Your PetCare notifications are working correctly!',
+          sound: 'default',
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: testTime,
+        },
+      });
+      
+      Alert.alert(
+        'Test Notification Scheduled! 📱',
+        'You should receive a test notification in 5 seconds.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Failed to schedule test notification:', error);
+      Alert.alert(
+        'Test Failed',
+        'Unable to schedule test notification. Please check your notification permissions.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsTestingNotification(false);
+    }
+  };
+
+  const handleTestActivityNotification = async () => {
+    try {
+      setIsTestingNotification(true);
+      
+      // Schedule a test activity notification for 2 minutes from now
+      const testTime = new Date();
+      testTime.setMinutes(testTime.getMinutes() + 2);
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🐾 Test Activity Notification',
+          body: 'This is a test activity notification.',
+          sound: 'default',
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: testTime,
+        },
+      });
+      
+      Alert.alert(
+        'Test Activity Notification Scheduled! 🐾',
+        'You should receive a test activity notification in 2 minutes.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Failed to schedule test activity notification:', error);
+      Alert.alert(
+        'Test Failed',
+        'Unable to schedule test activity notification. Please check your notification permissions.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsTestingNotification(false);
+    }
+  };
+
+  const handleRequestNotificationPermission = async () => {
+    try {
+      const success = await notificationService.initialize();
+      if (success) {
+        setNotificationEnabled(true);
+        Alert.alert(
+          'Permissions Granted! ✅',
+          'Notifications are now enabled for PetCare reminders.',
+          [{ text: 'OK' }]
+        );
+        await loadNotificationStatus();
+      } else {
+        Alert.alert(
+          'Permission Denied',
+          'Please enable notifications in your device settings to receive PetCare reminders.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to request notification permission:', error);
+      Alert.alert('Error', 'Failed to request notification permissions.');
     }
   };
 
@@ -85,6 +206,66 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
             </View>
           </View>
         </Card>
+
+        {/* Notifications Section */}
+        <View style={styles.settingsSection}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+          
+          <Card style={styles.settingCard}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons 
+                  name={notificationEnabled ? "notifications" : "notifications-off"} 
+                  size={24} 
+                  color={notificationEnabled ? Colors.success : Colors.textSecondary} 
+                />
+                <View style={styles.notificationInfo}>
+                  <Text style={styles.settingText}>
+                    {notificationEnabled ? 'Notifications Enabled' : 'Notifications Disabled'}
+                  </Text>
+                  {notificationEnabled && (
+                    <Text style={styles.notificationSubtext}>
+                      {scheduledCount} reminder{scheduledCount !== 1 ? 's' : ''} scheduled
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <View style={[
+                styles.statusIndicator,
+                { backgroundColor: notificationEnabled ? Colors.success : Colors.textSecondary }
+              ]} />
+            </View>
+          </Card>
+
+          {!notificationEnabled && (
+            <Button
+              title="Enable Notifications"
+              onPress={handleRequestNotificationPermission}
+              variant="outline"
+              style={styles.enableButton}
+            />
+          )}
+
+          {notificationEnabled && (
+            <Button
+              title="Test Notification"
+              onPress={handleTestNotification}
+              loading={isTestingNotification}
+              variant="outline"
+              style={styles.testButton}
+            />
+          )}
+
+          {notificationEnabled && (
+            <Button
+              title="Test Activity Notification (2 min)"
+              onPress={handleTestActivityNotification}
+              loading={isTestingNotification}
+              variant="outline" 
+              style={[styles.testButton, { marginTop: 8 }]}
+            />
+          )}
+        </View>
 
         {/* Settings Options */}
         <View style={styles.settingsSection}>
@@ -223,5 +404,27 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: Colors.error,
+  },
+  notificationInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  notificationSubtext: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  statusIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  enableButton: {
+    marginTop: 12,
+    borderColor: Colors.primary,
+  },
+  testButton: {
+    marginTop: 12,
+    borderColor: Colors.success,
   },
 }); 

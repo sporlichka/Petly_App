@@ -20,6 +20,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
+import { useActivityNotifications } from '../../hooks/useActivityNotifications';
 
 type ViewAllActivitiesScreenNavigationProp = StackNavigationProp<HomeStackParamList, 'ViewAllActivities'>;
 type ViewAllActivitiesScreenRouteProp = RouteProp<HomeStackParamList, 'ViewAllActivities'>;
@@ -39,6 +40,14 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deletingActivityId, setDeletingActivityId] = useState<number | null>(null);
+
+  // Initialize notification hook
+  const {
+    cancelActivityNotification,
+    rescheduleActivityNotification,
+    isNotificationScheduled,
+    cleanupOrphanedNotifications,
+  } = useActivityNotifications();
 
   useEffect(() => {
     loadPetAndActivities();
@@ -81,6 +90,15 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       setActivities(sortedActivities);
+      
+      // Cleanup orphaned notifications (notifications for activities that no longer exist)
+      try {
+        const activeActivityIds = sortedActivities.map(activity => activity.id);
+        await cleanupOrphanedNotifications(activeActivityIds);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup orphaned notifications:', cleanupError);
+        // Don't block the main flow for cleanup errors
+      }
     } catch (error) {
       console.error('Failed to load activities:', error);
       throw error;
@@ -130,6 +148,17 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
   const confirmDeleteActivity = async (activityId: number) => {
     try {
       setDeletingActivityId(activityId);
+      
+      // Cancel any associated notification first
+      try {
+        await cancelActivityNotification(activityId);
+        console.log(`Cancelled notification for activity ${activityId}`);
+      } catch (notificationError) {
+        console.error('Failed to cancel notification:', notificationError);
+        // Continue with deletion even if notification cancellation fails
+      }
+      
+      // Delete the activity from the backend
       await apiService.deleteActivityRecord(activityId);
       await loadActivities(); // Refresh the list
       Alert.alert('Success', 'Activity deleted successfully');
@@ -157,14 +186,30 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
       );
       
       // Make API call (only change notify field, keep repeat unchanged)
-      await apiService.updateActivityRecord(activity.id, {
+      const updatedActivity = await apiService.updateActivityRecord(activity.id, {
         notify: newNotifyValue,
       });
+      
+      // Handle notification scheduling/cancellation
+      try {
+        if (newNotifyValue) {
+          // Schedule notification for the updated activity
+          const notificationScheduled = await rescheduleActivityNotification(updatedActivity);
+          console.log(`Notification ${notificationScheduled ? 'scheduled' : 'failed'} for activity ${activity.id}`);
+        } else {
+          // Cancel notification
+          await cancelActivityNotification(activity.id);
+          console.log(`Cancelled notification for activity ${activity.id}`);
+        }
+      } catch (notificationError) {
+        console.error('Failed to handle notification toggle:', notificationError);
+        // Don't revert the notify state change, just log the error
+      }
       
       // Show success message
       Alert.alert(
         'Notifications Updated',
-        `Notifications ${currentlyEnabled ? 'disabled' : 'enabled'} for "${activity.title}"`
+        `Notifications ${currentlyEnabled ? 'disabled' : 'enabled'} for "${activity.title}"${newNotifyValue ? '\n\n📱 Reminder has been set!' : ''}`
       );
     } catch (error) {
       console.error('Failed to update notifications:', error);
@@ -241,6 +286,7 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
     const activityColor = getActivityColor(item.category);
     const notificationsEnabled = isNotificationsEnabled(item);
     const isDeleting = deletingActivityId === item.id;
+    const hasScheduledNotification = isNotificationScheduled(item.id);
 
     return (
       <Card variant="default" style={styles.activityCard}>
@@ -268,6 +314,12 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
               {item.repeat && (
                 <Text style={styles.activityRepeat}>
                   🔄 Repeats {item.repeat}
+                </Text>
+              )}
+              
+              {hasScheduledNotification && (
+                <Text style={styles.notificationScheduled}>
+                  🔔 Reminder scheduled
                 </Text>
               )}
             </View>
@@ -564,5 +616,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginRight: 4,
+  },
+  notificationScheduled: {
+    fontSize: 12,
+    color: Colors.success,
+    fontWeight: '500',
   },
 }); 

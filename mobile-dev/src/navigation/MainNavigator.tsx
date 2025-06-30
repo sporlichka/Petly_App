@@ -118,7 +118,7 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
         component={ChatScreen}
         options={{
           title: 'Vet Chat',
-          headerTitle: '🩺 PetCare Assistant',
+          headerShown: false,
         }}
       />
       <Tab.Screen 

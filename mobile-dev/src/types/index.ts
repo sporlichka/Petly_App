@@ -219,4 +219,15 @@ export interface LoadingState {
 export interface FormValidation {
   isValid: boolean;
   errors: { [key: string]: string };
+}
+
+// Notification types
+export interface ActivityNotification {
+  activityId: number;
+  notificationId: string;
+  createdAt: string;
+}
+
+export interface NotificationStorage {
+  [activityId: number]: ActivityNotification;
 } 
