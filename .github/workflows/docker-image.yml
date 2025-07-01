@@ -32,4 +32,4 @@ jobs:
       - name: 🔍 Show running containers
         run: |
           sudo docker ps
-          sudo docker-compose -f back-project/docker-compose.yml logs backend
+          sudo docker compose -f back-project/docker-compose.yml logs backend
