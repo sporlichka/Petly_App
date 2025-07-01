@@ -99,7 +99,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
       await Notifications.scheduleNotificationAsync({
         content: {
           title: '🐾 Test Notification',
-          body: 'Your PetCare notifications are working correctly!',
+          body: 'Your Vetly AI notifications are working correctly!',
           sound: 'default',
         },
         trigger: {
@@ -206,7 +206,7 @@ ${activityNotifications.length > 0 ?
   const handleNotificationInfo = () => {
     Alert.alert(
       'Notification System Info',
-      `📱 How notifications work in PetCare:
+      `📱 How notifications work in Vetly AI:
 
 🔄 REPEAT ACTIVITIES:
 • Daily: Creates 8 activities (1+7 repeats) with individual notifications for each day
@@ -435,14 +435,14 @@ ${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
         setNotificationEnabled(true);
         Alert.alert(
           'Permissions Granted! ✅',
-          'Notifications are now enabled for PetCare reminders.',
+          'Notifications are now enabled for Vetly AI reminders.',
           [{ text: 'OK' }]
         );
         await loadNotificationStatus();
       } else {
         Alert.alert(
           'Permission Denied',
-          'Please enable notifications in your device settings to receive PetCare reminders.',
+          'Please enable notifications in your device settings to receive Vetly AI reminders.',
           [{ text: 'OK' }]
         );
       }
@@ -816,11 +816,11 @@ ${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appTitle}>PetCare App</Text>
+          <Text style={styles.appTitle}>Vetly AI</Text>
           <Text style={styles.appVersion}>Version 1.0.0</Text>
-          <Text style={styles.appDescription}>
-            Your trusted companion for pet health and activity tracking
-          </Text>
+                      <Text style={styles.appDescription}>
+              AI-powered veterinary assistant for pet health and activity tracking
+            </Text>
         </View>
 
         {/* Password Change Modal */}

@@ -7,6 +7,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -99,8 +100,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           >
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.emoji}>🐾</Text>
-              <Text style={styles.title}>Welcome to PetCare</Text>
+              <Image 
+                source={require('../../../assets/vetly-logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <Text style={styles.title}>Welcome to Vetly AI</Text>
               <Text style={styles.subtitle}>
                 Track your pet's health and happiness with ease
               </Text>
@@ -189,8 +194,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  emoji: {
-    fontSize: 48,
+  logo: {
+    width: 80,
+    height: 80,
     marginBottom: 16,
   },
   title: {

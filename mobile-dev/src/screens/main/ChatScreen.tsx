@@ -62,7 +62,7 @@ export const ChatScreen: React.FC = () => {
         // Add welcome message for new chat
         const welcomeMessage: ChatMessage = {
           id: 'welcome',
-          content: "Hello! I'm your PetCare Assistant 🐾\n\nI'm here to help you with questions about your pet's health, behavior, and care. How can I help you today?",
+          content: "Hello! I'm your Vetly AI Assistant 🐾\n\nI'm here to help you with questions about your pet's health, behavior, and care. How can I help you today?",
           isUser: false,
           timestamp: new Date().toISOString(),
         };
@@ -249,7 +249,7 @@ export const ChatScreen: React.FC = () => {
             <Text style={styles.headerAvatarText}>🤖</Text>
           </View>
           <View>
-            <Text style={styles.headerTitle}>PetCare Assistant</Text>
+            <Text style={styles.headerTitle}>Vetly AI Assistant</Text>
             <Text style={styles.headerSubtitle}>AI Veterinary Assistant</Text>
           </View>
         </View>

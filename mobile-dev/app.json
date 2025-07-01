@@ -1,24 +1,25 @@
 {
   "expo": {
-    "name": "mobile-dev",
-    "slug": "mobile-dev",
+    "name": "Vetly AI",
+    "slug": "vetly-ai",
     "version": "1.0.0",
+    "description": "AI-powered veterinary assistant for pet health and activity tracking",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/vetly-logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/vetly-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FFC107"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/vetly-logo.png",
+        "backgroundColor": "#FFC107"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
@@ -28,14 +29,14 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/vetly-logo.png"
     },
     "plugins": [
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
-          "color": "#FFD54F",
+          "icon": "./assets/vetly-logo.png",
+          "color": "#FFC107",
           "sounds": ["./assets/notification.wav"]
         }
       ]
