@@ -28,3 +28,8 @@ jobs:
           cd back-project
           sudo docker compose down
           sudo docker compose up -d --build
+
+      - name: 🔍 Show running containers
+        run: |
+          docker ps
+          docker-compose -f back-project/docker-compose.yml logs backend
