@@ -13,23 +13,79 @@ jobs:
     steps:
       - name: 🧹 Cleanup all __pycache__ folders before checkout
         run: |
-          sudo find /home/Tabchny/actions-runner/_work/Vetly-AI-Backend -name '__pycache__' -type d -exec rm -rf {} +
+          sudo find /home/Tabchny/actions-runner/_work/Vetly-AI-Backend -name '__pycache__' -type d -exec rm -rf {} + || true
 
       - name: 📦 Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: 🔍 Check BACK_ENV secret availability
+        run: |
+          if [ -z "${{ secrets.BACK_ENV }}" ]; then
+            echo "❌ ERROR: BACK_ENV secret is not set in GitHub repository settings!"
+            echo "Please add BACK_ENV secret in repository Settings > Secrets and variables > Actions"
+            exit 1
+          else
+            echo "✅ BACK_ENV secret is available"
+          fi
 
       - name: 📄 Create .env file
         run: |
-          echo "$BACK_ENV" > ./back-project/.env
-          cat ./back-project/.env
+          cd back-project
+          echo "🔧 Creating .env file from BACK_ENV secret..."
+          echo "${{ secrets.BACK_ENV }}" > .env
+          
+          echo "📝 Checking .env file was created:"
+          if [ -f .env ]; then
+            echo "✅ .env file exists"
+            echo "📏 File size: $(wc -c < .env) bytes"
+            echo "📄 .env file contents (masked):"
+            sed 's/=.*/=***MASKED***/' .env
+          else
+            echo "❌ ERROR: .env file was not created!"
+            exit 1
+          fi
 
-      - name: 🐳 Docker Compose - build & run
+      - name: 🐳 Stop existing containers
         run: |
           cd back-project
-          sudo docker compose down
-          sudo docker compose up -d --build
+          echo "🛑 Stopping existing containers..."
+          sudo docker compose down --remove-orphans || true
+          sudo docker system prune -f || true
 
-      - name: 🔍 Show running containers
+      - name: 🔨 Build and start containers
         run: |
-          sudo docker ps
-          sudo docker compose -f back-project/docker-compose.yml logs backend
+          cd back-project
+          echo "🏗️ Building and starting containers..."
+          sudo docker compose up -d --build --force-recreate
+          
+          echo "⏳ Waiting for containers to start..."
+          sleep 10
+
+      - name: 🔍 Verify deployment
+        run: |
+          cd back-project
+          echo "🐳 Running containers:"
+          sudo docker compose ps
+          
+          echo "📊 Container health status:"
+          sudo docker compose top
+          
+          echo "📝 Backend logs (last 20 lines):"
+          sudo docker compose logs --tail=20 backend
+          
+          echo "🌐 Testing backend health:"
+          curl -f http://localhost:8000/docs || echo "⚠️ Backend health check failed"
+
+      - name: 🚨 Show errors if deployment failed
+        if: failure()
+        run: |
+          cd back-project
+          echo "💥 Deployment failed! Showing debug information..."
+          echo "📝 All container logs:"
+          sudo docker compose logs
+          
+          echo "🐳 Container status:"
+          sudo docker compose ps -a
+          
+          echo "💾 Docker system info:"
+          sudo docker system df
