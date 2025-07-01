@@ -11,4 +11,4 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    pets = relationship("Pet", back_populates="owner") 
+    pets = relationship("Pet", back_populates="owner", cascade="all, delete-orphan") 

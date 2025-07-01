@@ -31,4 +31,28 @@ def authenticate_user(db: Session, identifier: str, password: str):
         user = get_user_by_username(db, identifier)
     if not user or not pwd_context.verify(password, user.hashed_password):
         return None
-    return user 
+    return user
+
+def delete_user_profile(db: Session, user_id: int):
+    """
+    Delete user profile and all associated data (pets, activity records)
+    Returns True if successful, False if user not found
+    """
+    try:
+        # Get the user
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return False
+        
+        # Delete the user (cascade will handle pets and activity records)
+        db.delete(user)
+        db.commit()
+        return True
+        
+    except Exception as e:
+        db.rollback()
+        raise e
+
+def get_user_by_id(db: Session, user_id: int):
+    """Get user by ID"""
+    return db.query(User).filter(User.id == user_id).first() 

@@ -142,12 +142,13 @@ class ApiService {
   }
 
   async deleteProfile(): Promise<void> {
-    await this.request('/auth/delete-profile', {
+    await this.request('/auth/profile', {
       method: 'DELETE',
     });
     // Clear stored data after successful deletion
     await AsyncStorage.removeItem('access_token');
     await AsyncStorage.removeItem('user');
+    console.log('🗑️ Profile deleted - all data cleared');
   }
 
   // Pet endpoints

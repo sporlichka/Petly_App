@@ -48,4 +48,33 @@ def login_oauth2(form_data: OAuth2PasswordRequestForm = Depends(), db: Session =
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token({"sub": user.username})
-    return {"access_token": token, "token_type": "bearer"} 
+    return {"access_token": token, "token_type": "bearer"}
+
+@router.delete("/profile")
+def delete_profile(
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """
+    Delete user profile and all associated data (pets, activity records)
+    This action is irreversible and will permanently delete all user data.
+    """
+    try:
+        success = user_service.delete_user_profile(db, current_user.id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="User profile not found"
+            )
+        
+        return {
+            "message": "Profile deleted successfully",
+            "deleted_user_id": current_user.id,
+            "deleted_at": "now"
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete profile: {str(e)}"
+        ) 
