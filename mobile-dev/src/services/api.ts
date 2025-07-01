@@ -17,7 +17,7 @@ import {
   ApiError
 } from '../types';
 
-const API_BASE_URL = 'http://10.68.96.183:8000'; // Your backend IP address
+const API_BASE_URL = 'http://134.112.56.39:8000'; // Your backend IP address
 
 class ApiService {
   private async getAuthHeaders(): Promise<Record<string, string>> {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -31,7 +31,7 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, editActivity, activityData: initialData, preselectedDate } = route.params;
+  const { petId, category, editActivity, activityData: initialData, preselectedDate, fromScreen } = route.params;
   const isEditMode = !!editActivity;
   
   const [formData, setFormData] = useState<ActivityFormData>(() => {
@@ -49,6 +49,38 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
   });
   
   const [errors, setErrors] = useState<Partial<ActivityFormData>>({});
+
+  // Handle back navigation for edit mode
+  useEffect(() => {
+    if (isEditMode) {
+      const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+        // Check if user is going back
+        if (e.data.action.type === 'GO_BACK') {
+          // Prevent default behavior
+          e.preventDefault();
+          
+          // Navigate back to the appropriate screen based on source
+          if (fromScreen === 'Calendar') {
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'Calendar',
+                  }
+                ],
+              })
+            );
+          } else {
+            // Default behavior for other sources - go back to previous screen
+            navigation.getParent()?.goBack();
+          }
+        }
+      });
+
+      return unsubscribe;
+    }
+  }, [navigation, isEditMode, fromScreen]);
 
   const getCategoryInfo = () => {
     switch (category) {
@@ -108,7 +140,8 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
       category,
       editActivity,
       activityData: formData,
-      preselectedDate
+      preselectedDate,
+      fromScreen
     });
   };
 

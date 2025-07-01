@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 import { ActivityStackParamList, DateTimeData } from '../../types';
 import { Button } from '../../components/Button';
@@ -29,7 +29,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, editActivity, activityData, preselectedDate } = route.params;
+  const { petId, category, editActivity, activityData, preselectedDate, fromScreen } = route.params;
   const isEditMode = !!editActivity;
   
   const [dateTimeData, setDateTimeData] = useState<DateTimeData>(() => {
@@ -58,6 +58,33 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+
+  // Handle back navigation for edit mode from Calendar
+  useEffect(() => {
+    if (isEditMode && fromScreen === 'Calendar') {
+      const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+        // Check if user is going back
+        if (e.data.action.type === 'GO_BACK') {
+          // Prevent default behavior
+          e.preventDefault();
+          
+          // Navigate back to Calendar
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [
+                {
+                  name: 'Calendar',
+                }
+              ],
+            })
+          );
+        }
+      });
+
+      return unsubscribe;
+    }
+  }, [navigation, isEditMode, fromScreen]);
 
   const getCategoryInfo = () => {
     switch (category) {
@@ -88,18 +115,22 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
     });
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateConfirm = (selectedDate: Date) => {
     setShowDatePicker(false);
-    if (selectedDate) {
-      setDateTimeData(prev => ({ ...prev, date: selectedDate }));
-    }
+    setDateTimeData(prev => ({ ...prev, date: selectedDate }));
   };
 
-  const handleTimeChange = (event: any, selectedTime?: Date) => {
+  const handleTimeConfirm = (selectedTime: Date) => {
     setShowTimePicker(false);
-    if (selectedTime) {
-      setDateTimeData(prev => ({ ...prev, time: selectedTime }));
-    }
+    setDateTimeData(prev => ({ ...prev, time: selectedTime }));
+  };
+
+  const handleDateCancel = () => {
+    setShowDatePicker(false);
+  };
+
+  const handleTimeCancel = () => {
+    setShowTimePicker(false);
   };
 
   const getQuickTimePresets = () => {
@@ -137,7 +168,8 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
       category,
       editActivity,
       activityData: combinedDateTime,
-      preselectedDate
+      preselectedDate,
+      fromScreen
     });
   };
 
@@ -232,23 +264,21 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
           </View>
 
           {/* Date/Time Pickers */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={dateTimeData.date}
-              mode="date"
-              display="default"
-              onChange={handleDateChange}
-            />
-          )}
+          <DateTimePickerModal
+            isVisible={showDatePicker}
+            mode="date"
+            date={dateTimeData.date}
+            onConfirm={handleDateConfirm}
+            onCancel={handleDateCancel}
+          />
 
-          {showTimePicker && (
-            <DateTimePicker
-              value={dateTimeData.time}
-              mode="time"
-              display="default"
-              onChange={handleTimeChange}
-            />
-          )}
+          <DateTimePickerModal
+            isVisible={showTimePicker}
+            mode="time"
+            date={dateTimeData.time}
+            onConfirm={handleTimeConfirm}
+            onCancel={handleTimeCancel}
+          />
         </View>
       </SafeAreaView>
     </LinearGradient>

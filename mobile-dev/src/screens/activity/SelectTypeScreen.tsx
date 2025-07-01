@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { ActivityStackParamList, ActivityCategory } from '../../types';
@@ -25,8 +25,35 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, editActivity, preselectedDate } = route.params;
+  const { petId, editActivity, preselectedDate, fromScreen } = route.params;
   const isEditMode = !!editActivity;
+
+  // Handle back navigation for edit mode from Calendar
+  useEffect(() => {
+    if (isEditMode && fromScreen === 'Calendar') {
+      const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+        // Check if user is going back
+        if (e.data.action.type === 'GO_BACK') {
+          // Prevent default behavior
+          e.preventDefault();
+          
+          // Navigate back to Calendar
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [
+                {
+                  name: 'Calendar',
+                }
+              ],
+            })
+          );
+        }
+      });
+
+      return unsubscribe;
+    }
+  }, [navigation, isEditMode, fromScreen]);
 
   const activityTypes = [
     {
@@ -67,7 +94,8 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
       category,
       editActivity,
       activityData: initialData,
-      preselectedDate
+      preselectedDate,
+      fromScreen
     });
   };
 

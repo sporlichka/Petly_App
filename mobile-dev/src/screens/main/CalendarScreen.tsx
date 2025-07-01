@@ -300,7 +300,8 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
             params: { 
               petId: activity.pet_id,
               editActivity: activity,
-              preselectedDate: selectedDate
+              preselectedDate: selectedDate,
+              fromScreen: 'Calendar'
             }
           }
         }

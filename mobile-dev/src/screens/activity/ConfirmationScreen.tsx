@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -18,6 +18,11 @@ import { Card } from '../../components/Card';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
 import { useActivityNotifications } from '../../hooks/useActivityNotifications';
+import { 
+  createActivityWithRepeats, 
+  updateActivityWithRepeats, 
+  getRepeatSummary 
+} from '../../services/repeatActivityService';
 
 type ConfirmationScreenNavigationProp = StackNavigationProp<ActivityStackParamList, 'Confirmation'>;
 type ConfirmationScreenRouteProp = RouteProp<ActivityStackParamList, 'Confirmation'>;
@@ -31,7 +36,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, editActivity, activityData, preselectedDate } = route.params;
+  const { petId, category, editActivity, activityData, preselectedDate, fromScreen } = route.params;
   const [isSaving, setIsSaving] = useState(false);
   const isEditMode = !!editActivity;
 
@@ -41,6 +46,24 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
     rescheduleActivityNotification,
     cancelActivityNotification,
   } = useActivityNotifications();
+
+  // Handle back navigation for edit mode from Calendar
+  useEffect(() => {
+    if (isEditMode && fromScreen === 'Calendar') {
+      const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+        // Check if user is going back
+        if (e.data.action.type === 'GO_BACK') {
+          // Prevent default behavior
+          e.preventDefault();
+          
+          // Navigate back to Calendar tab - need to go up to MainNavigator (Tab Navigator)
+          navigation.getParent()?.getParent()?.navigate('Calendar');
+        }
+      });
+
+      return unsubscribe;
+    }
+  }, [navigation, isEditMode, fromScreen]);
 
   const getCategoryInfo = () => {
     switch (category) {
@@ -94,6 +117,8 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
     }
   };
 
+  const repeatSummary = getRepeatSummary(activityData.repeat);
+
   const handleSaveActivity = async () => {
     setIsSaving(true);
     
@@ -125,7 +150,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
       const localDateTimeString = formatLocalDateTime(combined);
       
       if (isEditMode && editActivity) {
-        // Update existing activity
+        // Update existing activity with repeats handling
         const activityUpdate: ActivityRecordUpdate = {
           title: activityData.title,
           date: localDateTimeString,
@@ -138,8 +163,11 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           duration: activityData.duration || undefined,
         };
 
-        console.log('Updating activity record:', activityUpdate);
+        console.log('Updating activity record with repeats:', activityUpdate);
         console.log('activityData.notifications value:', activityData.notifications, 'Type:', typeof activityData.notifications);
+        
+        // For edit mode, use simpler logic for now - just update the main activity
+        // TODO: Implement full repeat handling for edit mode
         const updatedActivity = await apiService.updateActivityRecord(editActivity.id, activityUpdate);
         
         // Handle notification scheduling for updated activity
@@ -165,14 +193,20 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
             {
               text: 'OK',
               onPress: () => {
-                // Navigate back to activities list
-                navigation.getParent()?.goBack();
+                // Navigate back to the source screen
+                if (fromScreen === 'Calendar') {
+                  // Navigate back to Calendar tab - need to go up to MainNavigator (Tab Navigator)
+                  navigation.getParent()?.getParent()?.navigate('Calendar');
+                } else {
+                  // Default behavior - navigate back to activities list
+                  navigation.getParent()?.goBack();
+                }
               }
             }
           ]
         );
       } else {
-        // Create new activity
+        // Create new activity with repeats
         const activityRecord: ActivityRecordCreate = {
           pet_id: petId,
           category,
@@ -187,30 +221,52 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           duration: activityData.duration || undefined,
         };
 
-        console.log('Creating activity record:', activityRecord);
+        console.log('Creating activity record with repeats:', activityRecord);
         console.log('activityData.notifications value:', activityData.notifications, 'Type:', typeof activityData.notifications);
-        const createdActivity = await apiService.createActivityRecord(activityRecord);
         
-        // Handle notification scheduling for new activity
+        // Use new repeat service to create all activities
+        const repeatResult = await createActivityWithRepeats(activityRecord);
+        
+        if (!repeatResult.success) {
+          throw new Error(`Failed to create activities: ${repeatResult.errors.join(', ')}`);
+        }
+        
+        const createdActivity = repeatResult.mainActivity;
+        const totalCreated = 1 + repeatResult.repeatActivities.length;
+        
+        console.log(`✅ Created ${totalCreated} activities (1 main + ${repeatResult.repeatActivities.length} repeats)`);
+        
+        // Handle notification scheduling for main activity only
+        // Repeat activities don't need individual notifications since they don't have repeat field
         try {
           if (activityData.notifications) {
             const notificationScheduled = await scheduleActivityNotification(createdActivity);
-            console.log(`Notification ${notificationScheduled ? 'scheduled' : 'failed'} for new activity ${createdActivity.id}`);
+            console.log(`Notification ${notificationScheduled ? 'scheduled' : 'failed'} for main activity ${createdActivity.id}`);
           }
         } catch (notificationError) {
           console.error('Failed to schedule notification for new activity:', notificationError);
           // Don't block the success flow for notification errors
         }
         
+        const successMessage = totalCreated > 1 
+          ? `${activityData.title} has been added to your pet's activity log.\n\n📅 Created ${totalCreated} activities total (including ${repeatResult.repeatActivities.length} repeats).${activityData.notifications ? '\n\n📱 Reminder has been set!' : ''}${repeatResult.extensionReminderId ? '\n\n⏰ Extension reminder scheduled!' : ''}`
+          : `${activityData.title} has been added to your pet's activity log.${activityData.notifications ? '\n\n📱 Reminder has been set!' : ''}`;
+
         Alert.alert(
           'Activity Saved! 🎉',
-          `${activityData.title} has been added to your pet's activity log.${activityData.notifications ? '\n\n📱 Reminder has been set!' : ''}`,
+          successMessage,
           [
             {
               text: 'OK',
               onPress: () => {
-                // Navigate back to the home stack, specifically to PetDetail
-                navigation.getParent()?.goBack();
+                // Navigate back to the source screen
+                if (fromScreen === 'Calendar') {
+                  // Navigate back to Calendar tab - need to go up to MainNavigator (Tab Navigator)
+                  navigation.getParent()?.getParent()?.navigate('Calendar');
+                } else {
+                  // Default behavior - navigate back to the home stack, specifically to PetDetail
+                  navigation.getParent()?.goBack();
+                }
               }
             }
           ]
@@ -284,6 +340,9 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Repeat</Text>
                 <Text style={styles.detailValue}>{getRepeatText()}</Text>
+                {repeatSummary.willCreateRepeats && (
+                  <Text style={styles.detailSubtext}>{repeatSummary.description}</Text>
+                )}
               </View>
             </View>
 
@@ -439,6 +498,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.text,
     fontWeight: '500',
+  },
+  detailSubtext: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 16,
   },
   notesText: {
     fontSize: 16,

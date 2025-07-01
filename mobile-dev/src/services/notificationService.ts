@@ -328,10 +328,15 @@ export class NotificationService {
       // Get all scheduled notifications
       const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
       
-      // Find notifications for this activity
+      // Find notifications for this activity, but EXCLUDE extension reminders
       const activityNotifications = scheduledNotifications.filter(
-        notification => notification.content.data?.activityId === activityId
+        notification => {
+          const data = notification.content.data;
+          return data?.activityId === activityId && data?.type !== 'repeat-extension';
+        }
       );
+
+      console.log(`🧹 Cancelling ${activityNotifications.length} activity notifications for activity ${activityId} (excluding extension reminders)`);
 
       // Cancel each notification
       for (const notification of activityNotifications) {
@@ -368,6 +373,71 @@ export class NotificationService {
     } catch (error) {
       console.error('Failed to get scheduled notifications count:', error);
       return 0;
+    }
+  }
+
+  async cancelExtensionReminder(activityId: number): Promise<boolean> {
+    try {
+      // Get all scheduled notifications
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      
+      // Find extension reminder for this activity
+      const extensionReminders = scheduledNotifications.filter(
+        notification => {
+          const data = notification.content.data;
+          return data?.activityId === activityId && data?.type === 'repeat-extension';
+        }
+      );
+
+      console.log(`🗑️ Found ${extensionReminders.length} extension reminders for activity ${activityId}`);
+
+      // Cancel each extension reminder
+      for (const notification of extensionReminders) {
+        await this.cancelNotification(notification.identifier);
+        console.log(`🗑️ Cancelled extension reminder ${notification.identifier} for activity ${activityId}`);
+      }
+
+      return extensionReminders.length > 0;
+    } catch (error) {
+      console.error('Failed to cancel extension reminders:', error);
+      return false;
+    }
+  }
+
+  async getAllNotificationsByType(): Promise<{activityNotifications: any[], extensionReminders: any[], other: any[]}> {
+    try {
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      
+      const activityNotifications = scheduledNotifications.filter(
+        notification => {
+          const data = notification.content.data;
+          return data?.activityId && data?.type !== 'repeat-extension';
+        }
+      );
+
+      const extensionReminders = scheduledNotifications.filter(
+        notification => {
+          const data = notification.content.data;
+          return data?.type === 'repeat-extension';
+        }
+      );
+
+      const other = scheduledNotifications.filter(
+        notification => {
+          const data = notification.content.data;
+          return !data?.activityId && data?.type !== 'repeat-extension';
+        }
+      );
+
+      console.log(`📊 Notification breakdown:`);
+      console.log(`  - Activity notifications: ${activityNotifications.length}`);
+      console.log(`  - Extension reminders: ${extensionReminders.length}`);
+      console.log(`  - Other notifications: ${other.length}`);
+
+      return { activityNotifications, extensionReminders, other };
+    } catch (error) {
+      console.error('Failed to get notifications by type:', error);
+      return { activityNotifications: [], extensionReminders: [], other: [] };
     }
   }
 

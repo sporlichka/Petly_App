@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -17,6 +17,7 @@ import { ActivityStackParamList, RepeatData } from '../../types';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Colors } from '../../constants/Colors';
+import { getRepeatSummary } from '../../services/repeatActivityService';
 
 type SetRepeatScreenNavigationProp = StackNavigationProp<ActivityStackParamList, 'SetRepeat'>;
 type SetRepeatScreenRouteProp = RouteProp<ActivityStackParamList, 'SetRepeat'>;
@@ -30,7 +31,7 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { petId, category, editActivity, activityData, preselectedDate } = route.params;
+  const { petId, category, editActivity, activityData, preselectedDate, fromScreen } = route.params;
   const isEditMode = !!editActivity;
   
   const [repeatData, setRepeatData] = useState<RepeatData>(() => {
@@ -52,6 +53,33 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
       notifications: false,
     };
   });
+
+  // Handle back navigation for edit mode from Calendar
+  useEffect(() => {
+    if (isEditMode && fromScreen === 'Calendar') {
+      const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+        // Check if user is going back
+        if (e.data.action.type === 'GO_BACK') {
+          // Prevent default behavior
+          e.preventDefault();
+          
+          // Navigate back to Calendar
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [
+                {
+                  name: 'Calendar',
+                }
+              ],
+            })
+          );
+        }
+      });
+
+      return unsubscribe;
+    }
+  }, [navigation, isEditMode, fromScreen]);
 
   const getCategoryInfo = () => {
     switch (category) {
@@ -112,11 +140,13 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
       category,
       editActivity,
       activityData: finalData,
-      preselectedDate
+      preselectedDate,
+      fromScreen
     });
   };
 
   const categoryInfo = getCategoryInfo();
+  const repeatSummary = getRepeatSummary(repeatData.repeat);
 
   return (
     <LinearGradient
@@ -211,6 +241,17 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
                 />
               </View>
             </Card>
+
+            {/* Repeat Summary */}
+            {repeatSummary.willCreateRepeats && (
+              <Card variant="default" style={styles.summaryCard}>
+                <View style={styles.summaryHeader}>
+                  <Ionicons name="calendar-outline" size={20} color={categoryInfo.color} />
+                  <Text style={styles.summaryTitle}>Что будет создано</Text>
+                </View>
+                <Text style={styles.summaryDescription}>{repeatSummary.description}</Text>
+              </Card>
+            )}
 
             {/* Info Text */}
             {repeatData.repeat !== 'none' && (
@@ -381,6 +422,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     lineHeight: 16,
+  },
+  summaryCard: {
+    marginBottom: 12,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  summaryTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text,
+    marginLeft: 8,
+  },
+  summaryDescription: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
   },
   infoContainer: {
     flexDirection: 'row',

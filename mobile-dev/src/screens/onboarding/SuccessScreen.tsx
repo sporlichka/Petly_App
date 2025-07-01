@@ -46,7 +46,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({ onComplete }) => {
             </Text>
             <Text style={styles.description}>
               You're all set to start tracking your pet's health, activities, and happiness. 
-              Our AI assistant is ready to help you with any questions!
+              Our AI assistant is ready to help you!
             </Text>
           </View>
 
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     alignItems: 'center',
-    marginVertical: 40,
+    marginVertical: 20,
   },
   title: {
     fontSize: 36,
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   featuresContainer: {
-    marginVertical: 20,
+    marginVertical: 10,
   },
   featuresTitle: {
     fontSize: 18,

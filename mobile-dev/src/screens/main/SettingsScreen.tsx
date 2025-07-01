@@ -6,6 +6,7 @@ import {
   Alert,
   ScrollView,
   Modal,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
 import { notificationService } from '../../services/notificationService';
 import { useActivityNotifications } from '../../hooks/useActivityNotifications';
+import { setDevelopmentMode, getDevelopmentMode, loadDevelopmentMode } from '../../utils/repeatHelpers';
 
 interface SettingsScreenProps {
   onLogout: () => void;
@@ -38,13 +40,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   });
   const [passwordErrors, setPasswordErrors] = useState<{[key: string]: string}>({});
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [testNotificationMode, setTestNotificationMode] = useState(false);
 
   const { getAllScheduledCount } = useActivityNotifications();
 
   useEffect(() => {
     loadUserInfo();
     loadNotificationStatus();
+    loadTestModeState();
   }, []);
+
+  const loadTestModeState = async () => {
+    try {
+      const devMode = await loadDevelopmentMode();
+      setTestNotificationMode(devMode);
+    } catch (error) {
+      console.error('Failed to load test mode state:', error);
+    }
+  };
 
   const loadUserInfo = async () => {
     try {
@@ -112,6 +125,84 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
     }
   };
 
+  const handleTestExtensionReminder = async () => {
+    try {
+      // Schedule extension reminder for 10 seconds from now
+      const testTime = new Date();
+      testTime.setSeconds(testTime.getSeconds() + 10);
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '⏰ Расписание активности завершилось',
+          body: 'Хотите продлить расписание "Test Activity" на следующие дни?',
+          sound: 'default',
+          data: {
+            type: 'repeat-extension',
+            activityId: 999,
+            originalRepeat: 'daily',
+            petId: 1,
+            category: 'FEEDING',
+          },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: testTime,
+        },
+      });
+      
+      Alert.alert(
+        'Extension Reminder Scheduled! ⏰',
+        'You should receive an extension reminder in 10 seconds.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Failed to schedule extension reminder:', error);
+      Alert.alert(
+        'Test Failed',
+        'Unable to schedule extension reminder. Please check your notification permissions.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handleDebugNotifications = async () => {
+    try {
+      const { activityNotifications, extensionReminders, other } = await notificationService.getAllNotificationsByType();
+      
+      const totalCount = activityNotifications.length + extensionReminders.length + other.length;
+      
+      const debugInfo = `📊 Notification Debug Info:
+
+📱 Total Scheduled: ${totalCount}
+🔔 Activity Notifications: ${activityNotifications.length}
+⏰ Extension Reminders: ${extensionReminders.length}
+📝 Other Notifications: ${other.length}
+
+${extensionReminders.length > 0 ? 
+  `\n⏰ Extension Reminders:\n${extensionReminders.map((n, i) => 
+    `${i + 1}. Activity ${n.content.data?.activityId} - ${new Date(n.trigger.value).toLocaleString()}`
+  ).join('\n')}` : 
+  '\n⏰ No extension reminders found'
+}
+
+${activityNotifications.length > 0 ? 
+  `\n🔔 Activity Notifications:\n${activityNotifications.slice(0, 3).map((n, i) => 
+    `${i + 1}. Activity ${n.content.data?.activityId} - ${n.content.title}`
+  ).join('\n')}${activityNotifications.length > 3 ? '\n...' : ''}` : 
+  '\n🔔 No activity notifications found'
+}`;
+
+      Alert.alert(
+        'Notification Debug',
+        debugInfo,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Failed to debug notifications:', error);
+      Alert.alert('Debug Failed', 'Unable to get notification information.');
+    }
+  };
+
   const handleDisableAllNotifications = async () => {
     try {
       Alert.alert(
@@ -131,7 +222,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
                   Alert.alert(
                     'All Notifications Disabled ✅',
                     'All scheduled notifications have been cancelled. You can re-enable them individually from the activities list.',
-                    [{ text: 'OK' }]
+        [{ text: 'OK' }]
                   );
                 } else {
                   Alert.alert('Error', 'Failed to disable all notifications. Please try again.');
@@ -264,6 +355,27 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
     }
   };
 
+  const handleTestModeToggle = async (enabled: boolean) => {
+    setTestNotificationMode(enabled);
+    
+    try {
+      await setDevelopmentMode(enabled);
+      
+      Alert.alert(
+        'Test Mode Updated',
+        enabled 
+          ? 'Extension reminders will now be scheduled for 2 minutes instead of days. Perfect for testing!'
+          : 'Extension reminders will now use normal intervals (7/28/90 days).',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Failed to update test mode:', error);
+      Alert.alert('Error', 'Failed to update test mode setting.');
+      // Revert UI state on error
+      setTestNotificationMode(!enabled);
+    }
+  };
+
   const handleDeleteProfile = () => {
     Alert.alert(
       'Delete Profile',
@@ -367,6 +479,28 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
             </View>
           </Card>
 
+          {__DEV__ && (
+            <Card style={styles.settingCard}>
+              <View style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="flask-outline" size={24} color={Colors.primary} />
+                  <View style={styles.notificationInfo}>
+                    <Text style={styles.settingText}>Test Mode (Dev Only)</Text>
+                    <Text style={styles.notificationSubtext}>
+                      Extension reminders in 2 minutes instead of days
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={testNotificationMode}
+                  onValueChange={handleTestModeToggle}
+                  trackColor={{ false: Colors.border, true: Colors.primary + '40' }}
+                  thumbColor={testNotificationMode ? Colors.primary : Colors.textLight}
+                />
+              </View>
+            </Card>
+          )}
+
           {!notificationEnabled && (
             <Button
               title="Enable Notifications"
@@ -378,22 +512,40 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
 
           {notificationEnabled && (
             <>
-              <Button
-                title="Test Notification"
-                onPress={handleTestNotification}
-                loading={isTestingNotification}
-                variant="outline"
-                style={styles.testButton}
-              />
-              
-              <Button
-                title="Disable All Notifications"
+            <Button
+              title="🔔 Test Notification (5s)"
+              onPress={handleTestNotification}
+              loading={isTestingNotification}
+              variant="outline"
+              style={styles.testButton}
+            />
+
+            {__DEV__ && (
+              <>
+                <Button
+                  title="⏰ Test Extension Reminder (10s)"
+                  onPress={handleTestExtensionReminder}
+                  variant="outline"
+                  style={[styles.testButton, { marginTop: 8 }]}
+                />
+                
+                <Button
+                  title="🔍 Debug Notifications"
+                  onPress={handleDebugNotifications}
+                  variant="outline"
+                  style={[styles.testButton, { marginTop: 8 }]}
+                />
+              </>
+            )}
+
+            <Button
+                title="🚫 Disable All Notifications"
                 onPress={handleDisableAllNotifications}
                 loading={isLoading}
-                variant="outline"
+              variant="outline" 
                 style={[styles.disableButton, { marginTop: 8 }]}
                 textStyle={styles.disableButtonText}
-              />
+            />
             </>
           )}
         </View>
@@ -425,7 +577,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
                 <Text style={[styles.settingText, { color: Colors.error }]}>Delete Profile</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
-            </View>
+        </View>
           </Card>
         </View>
 
@@ -470,7 +622,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
                 }}
                 textStyle={styles.cancelButtonText}
               />
-            </View>
+      </View>
 
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
               <Input

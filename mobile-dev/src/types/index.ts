@@ -156,11 +156,11 @@ export type OnboardingStackParamList = {
 };
 
 export type ActivityStackParamList = {
-  SelectType: { petId: number; editActivity?: ActivityRecord; preselectedDate?: string };
-  FillDetails: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData?: any; preselectedDate?: string };
-  SelectDateTime: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData: any; preselectedDate?: string };
-  SetRepeat: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData: any; preselectedDate?: string };
-  Confirmation: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData: any; preselectedDate?: string };
+  SelectType: { petId: number; editActivity?: ActivityRecord; preselectedDate?: string; fromScreen?: string };
+  FillDetails: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData?: any; preselectedDate?: string; fromScreen?: string };
+  SelectDateTime: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData: any; preselectedDate?: string; fromScreen?: string };
+  SetRepeat: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData: any; preselectedDate?: string; fromScreen?: string };
+  Confirmation: { petId: number; category: ActivityCategory; editActivity?: ActivityRecord; activityData: any; preselectedDate?: string; fromScreen?: string };
 };
 
 // Form types

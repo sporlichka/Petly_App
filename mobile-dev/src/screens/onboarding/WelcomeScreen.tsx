@@ -38,13 +38,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
 
           {/* Welcome Content */}
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Welcome to PetCare! 🎉</Text>
-            <Text style={styles.subtitle}>
-              Track your pet's health with ease
-            </Text>
+            <Text style={styles.title}>Welcome to Vetly AI🎉</Text>
             <Text style={styles.description}>
-              Keep a detailed record of feeding schedules, health checkups, and daily activities. 
-              Get AI-powered insights and recommendations from our virtual vet assistant.
+              Track your pet's health and get AI-powered vet insights.
             </Text>
           </View>
 
@@ -112,7 +108,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     alignItems: 'center',
-    marginVertical: 32,
+    marginVertical: 16,
   },
   title: {
     fontSize: 32,
@@ -137,6 +133,7 @@ const styles = StyleSheet.create({
   },
   featuresContainer: {
     marginVertical: 20,
+    flex: 1,
   },
   feature: {
     flexDirection: 'row',
@@ -167,7 +164,7 @@ const styles = StyleSheet.create({
   },
   ctaContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    paddingBottom: 30,
   },
   ctaButton: {
     width: '100%',
