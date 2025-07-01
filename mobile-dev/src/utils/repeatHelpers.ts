@@ -207,11 +207,11 @@ export function shouldCreateRepeats(repeat: string | undefined | null): boolean 
 export function getRepeatDescription(repeat: 'daily' | 'weekly' | 'monthly'): string {
   switch (repeat) {
     case 'daily':
-      return 'каждый день в течение 7 дней';
+      return 'каждый день в течение 7 дней (с уведомлениями для каждого дня)';
     case 'weekly':
-      return 'каждую неделю в течение 4 недель';
+      return 'каждую неделю в течение 4 недель (с уведомлениями для каждой недели)';
     case 'monthly':
-      return 'каждый месяц в течение 3 месяцев';
+      return 'каждый месяц в течение 3 месяцев (с уведомлениями для каждого месяца)';
     default:
       return '';
   }

@@ -203,6 +203,34 @@ ${activityNotifications.length > 0 ?
     }
   };
 
+  const handleNotificationInfo = () => {
+    Alert.alert(
+      'Notification System Info',
+      `📱 How notifications work in PetCare:
+
+🔄 REPEAT ACTIVITIES:
+• Daily: Creates 8 activities (1+7 repeats) with individual notifications for each day
+• Weekly: Creates 5 activities (1+4 repeats) with individual notifications for each week  
+• Monthly: Creates 4 activities (1+3 repeats) with individual notifications for each month
+
+⏰ TIMING:
+• Each repeat activity gets its own separate notification scheduled for the exact date/time
+• Monthly activities will receive notifications exactly 1, 2, and 3 months after the original
+
+🔔 RELIABILITY:
+• Daily/Weekly: Very reliable (system repeating notifications)
+• Monthly: Reliable (individual date-based notifications)
+
+⚠️ LIMITATIONS:
+• Notifications may not work if app is uninstalled/data cleared
+• System may limit notifications scheduled far in the future
+• Battery optimization settings can affect delivery
+
+💡 TIP: Use Debug button to see all scheduled notifications!`,
+      [{ text: 'Got it!' }]
+    );
+  };
+
   const handleDisableAllNotifications = async () => {
     try {
       Alert.alert(
@@ -532,6 +560,13 @@ ${activityNotifications.length > 0 ?
                 <Button
                   title="🔍 Debug Notifications"
                   onPress={handleDebugNotifications}
+                  variant="outline"
+                  style={[styles.testButton, { marginTop: 8 }]}
+                />
+
+                <Button
+                  title="ℹ️ Notification Info"
+                  onPress={handleNotificationInfo}
                   variant="outline"
                   style={[styles.testButton, { marginTop: 8 }]}
                 />

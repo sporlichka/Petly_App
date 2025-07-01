@@ -235,21 +235,13 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
         const totalCreated = 1 + repeatResult.repeatActivities.length;
         
         console.log(`✅ Created ${totalCreated} activities (1 main + ${repeatResult.repeatActivities.length} repeats)`);
+        console.log(`📱 Notifications scheduled: ${repeatResult.notificationIds.length}`);
         
-        // Handle notification scheduling for main activity only
-        // Repeat activities don't need individual notifications since they don't have repeat field
-        try {
-          if (activityData.notifications) {
-            const notificationScheduled = await scheduleActivityNotification(createdActivity);
-            console.log(`Notification ${notificationScheduled ? 'scheduled' : 'failed'} for main activity ${createdActivity.id}`);
-          }
-        } catch (notificationError) {
-          console.error('Failed to schedule notification for new activity:', notificationError);
-          // Don't block the success flow for notification errors
-        }
+        // Notifications are already scheduled by the repeat service
+        // No need to schedule them again here
         
         const successMessage = totalCreated > 1 
-          ? `${activityData.title} has been added to your pet's activity log.\n\n📅 Created ${totalCreated} activities total (including ${repeatResult.repeatActivities.length} repeats).${activityData.notifications ? '\n\n📱 Reminder has been set!' : ''}${repeatResult.extensionReminderId ? '\n\n⏰ Extension reminder scheduled!' : ''}`
+          ? `${activityData.title} has been added to your pet's activity log.\n\n📅 Created ${totalCreated} activities total (including ${repeatResult.repeatActivities.length} repeats).${repeatResult.notificationIds.length > 0 ? `\n\n📱 ${repeatResult.notificationIds.length} reminders have been set!` : ''}${repeatResult.extensionReminderId ? '\n\n⏰ Extension reminder scheduled!' : ''}`
           : `${activityData.title} has been added to your pet's activity log.${activityData.notifications ? '\n\n📱 Reminder has been set!' : ''}`;
 
         Alert.alert(
