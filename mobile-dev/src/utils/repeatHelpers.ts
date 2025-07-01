@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityRecordCreate, ActivityRecord } from '../types';
+import { extensionModalService } from '../services/extensionModalService';
 
 const DEV_MODE_STORAGE_KEY = 'repeat_test_mode';
 
@@ -158,10 +159,11 @@ export async function scheduleExtensionReminder(
       return null;
     }
 
+    // Планируем уведомление
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
-        title: '⏰ Расписание активности завершилось',
-        body: `Хотите продлить расписание "${activity.title}" на следующие дни?`,
+        title: '⏰ Activity schedule completed',
+        body: `Would you like to extend the schedule for "${activity.title}"?`,
         sound: 'default',
         data: {
           type: 'repeat-extension',
@@ -176,6 +178,23 @@ export async function scheduleExtensionReminder(
         date: reminderDate,
       },
     });
+
+    // Планируем модальное окно на ту же дату
+    try {
+      await extensionModalService.scheduleExtensionModal({
+        activityId: activity.id,
+        activityTitle: activity.title,
+        originalRepeat: repeat,
+        petId: activity.pet_id,
+        category: activity.category,
+        scheduledDate: reminderDate.toISOString(),
+        createdAt: new Date().toISOString(),
+      });
+      console.log(`📋 Scheduled extension modal for activity ${activity.id}`);
+    } catch (modalError) {
+      console.error('❌ Failed to schedule extension modal:', modalError);
+      // Не блокируем основной процесс из-за ошибки модалки
+    }
 
     console.log(`✅ Extension reminder scheduled: ${notificationId}`);
     console.log(`   Will fire on: ${reminderDate.toLocaleString()}`);

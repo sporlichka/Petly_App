@@ -1,6 +1,7 @@
 import { ActivityRecordCreate, ActivityRecord } from '../types';
 import { apiService } from './api';
 import { notificationService } from './notificationService';
+import { extensionModalService } from './extensionModalService';
 import { 
   getRepeatDates, 
   createRepeatActivity, 
@@ -267,6 +268,19 @@ export async function updateActivityWithRepeats(
     result.errors.push(`Update error: ${error}`);
     result.success = false;
     return result;
+  }
+}
+
+/**
+ * Очищает все связанные с активностью модальные окна продления
+ */
+export async function cleanupExtensionModalsForActivity(activityId: number): Promise<void> {
+  try {
+    console.log(`🧹 Cleaning up extension modals for activity ${activityId}`);
+    await extensionModalService.removeAllModalsForActivity(activityId);
+    console.log(`✅ Extension modals cleaned up for activity ${activityId}`);
+  } catch (error) {
+    console.error(`❌ Failed to cleanup extension modals for activity ${activityId}:`, error);
   }
 }
 

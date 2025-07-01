@@ -231,6 +231,164 @@ ${activityNotifications.length > 0 ?
     );
   };
 
+  const handleTestExtensionModal = async () => {
+    try {
+      // Получаем реального питомца пользователя для тестирования
+      const pets = await apiService.getPets();
+      
+      if (pets.length === 0) {
+        Alert.alert(
+          'No Pets Found',
+          'Please add a pet to the app first to test the extension modal.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const firstPet = pets[0];
+      const { extensionModalService } = await import('../../services/extensionModalService');
+      
+      // Планируем тестовое модальное окно на текущее время с реальным питомцем
+      await extensionModalService.scheduleExtensionModal({
+        activityId: 999, // Тестовый ID
+        activityTitle: `Test walk for ${firstPet.name}`,
+        originalRepeat: 'daily',
+        petId: firstPet.id,
+        category: 'ACTIVITY',
+        scheduledDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      });
+      
+      Alert.alert(
+        '📋 Test Extension Modal Scheduled',
+        `Created test extension modal for pet "${firstPet.name}". The modal should appear on next app restart or check via "Check Extension Modals".`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Failed to test extension modal:', error);
+              Alert.alert(
+          'Error', 
+          error instanceof Error && error.message.includes('Pet not found') 
+            ? 'Pet not found. Make sure you have pets in the app.'
+            : 'Failed to schedule test extension modal'
+        );
+    }
+  };
+
+  const handleDebugExtensionModals = async () => {
+    try {
+      const { extensionModalService } = await import('../../services/extensionModalService');
+      
+      const queue = await extensionModalService.getModalQueue();
+      const pending = await extensionModalService.getPendingModals();
+      
+      const debugText = `
+📋 Extension Modals Debug:
+
+📊 Total queued: ${Object.keys(queue).length}
+🔔 Ready to show: ${pending.length}
+
+📋 Queued Modals:
+${Object.entries(queue).map(([key, data]) => {
+  const scheduledDate = new Date(data.scheduledDate);
+  const isPending = scheduledDate <= new Date();
+  return `• ${data.activityTitle} (ID: ${data.activityId})
+  📅 Scheduled: ${scheduledDate.toLocaleString()}
+  🔄 Repeat: ${data.originalRepeat}
+  ${isPending ? '🟢 READY' : '🔵 WAITING'}`;
+}).join('\n\n')}
+
+${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
+      `.trim();
+
+      Alert.alert('📋 Extension Modals Debug', debugText);
+    } catch (error) {
+      console.error('Failed to debug extension modals:', error);
+      Alert.alert('Error', 'Failed to get extension modals information');
+    }
+  };
+
+  const handleForceCheckExtensionModals = async () => {
+    try {
+      const { extensionModalService } = await import('../../services/extensionModalService');
+      
+      const pending = await extensionModalService.getPendingModals();
+      
+      if (pending.length > 0) {
+        Alert.alert(
+          '📋 Ready Extension Modals Found!',
+          `Found ${pending.length} extension modals ready to show. Restart the app to see them.`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          '📋 No Extension Modals Found',
+          'No extension modals ready to show.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to check extension modals:', error);
+      Alert.alert('Error', 'Failed to check extension modals');
+    }
+  };
+
+  const handleTestWithPetSelection = async () => {
+    try {
+      const pets = await apiService.getPets();
+      
+      if (pets.length === 0) {
+        Alert.alert(
+          'No Pets Found',
+          'Please add a pet to the app first for testing.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Создаем кнопки для каждого питомца
+      const petButtons = pets.slice(0, 3).map(pet => ({
+        text: `🐾 ${pet.name}`,
+        onPress: async () => {
+          try {
+            const { extensionModalService } = await import('../../services/extensionModalService');
+            
+            await extensionModalService.scheduleExtensionModal({
+              activityId: 888, // Другой тестовый ID
+              activityTitle: `Test activity for ${pet.name}`,
+              originalRepeat: 'weekly', // Тестируем weekly
+              petId: pet.id,
+              category: 'FEEDING',
+              scheduledDate: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+            });
+            
+            Alert.alert(
+              '✅ Extension Modal Created!',
+              `Created test extension modal for pet "${pet.name}" with weekly repeat.`,
+              [{ text: 'OK' }]
+            );
+          } catch (error) {
+            console.error('Failed to create modal for pet:', error);
+            Alert.alert('Error', `Failed to create extension modal for ${pet.name}`);
+          }
+        },
+      }));
+
+      // Добавляем кнопку отмены
+      petButtons.push({ text: 'Cancel', style: 'cancel' as any });
+
+      Alert.alert(
+        '🐾 Select Pet for Testing',
+        'For which pet would you like to create a test extension modal?',
+        petButtons
+      );
+    } catch (error) {
+      console.error('Failed to load pets for testing:', error);
+      Alert.alert('Error', 'Failed to load pets list');
+    }
+  };
+
   const handleDisableAllNotifications = async () => {
     try {
       Alert.alert(
@@ -567,6 +725,34 @@ ${activityNotifications.length > 0 ?
                 <Button
                   title="ℹ️ Notification Info"
                   onPress={handleNotificationInfo}
+                  variant="outline"
+                  style={[styles.testButton, { marginTop: 8 }]}
+                />
+
+                <Button
+                  title="📋 Test Extension Modal"
+                  onPress={handleTestExtensionModal}
+                  variant="outline"
+                  style={[styles.testButton, { marginTop: 8 }]}
+                />
+
+                <Button
+                  title="🔍 Debug Extension Modals"
+                  onPress={handleDebugExtensionModals}
+                  variant="outline"
+                  style={[styles.testButton, { marginTop: 8 }]}
+                />
+
+                <Button
+                  title="✅ Check Extension Modals"
+                  onPress={handleForceCheckExtensionModals}
+                  variant="outline"
+                  style={[styles.testButton, { marginTop: 8 }]}
+                />
+
+                <Button
+                  title="🐾 Test with Pet Selection"
+                  onPress={handleTestWithPetSelection}
                   variant="outline"
                   style={[styles.testButton, { marginTop: 8 }]}
                 />

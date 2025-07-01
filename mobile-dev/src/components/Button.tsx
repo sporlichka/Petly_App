@@ -35,7 +35,7 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      borderRadius: 25,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
       flexDirection: 'row',
@@ -156,7 +156,7 @@ export const Button: React.FC<ButtonProps> = ({
           colors={Colors.gradient.primary}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={[getButtonStyle()]}
+          style={[getButtonStyle(), style]}
         >
           {renderContent()}
         </LinearGradient>
