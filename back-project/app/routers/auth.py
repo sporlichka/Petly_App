@@ -50,7 +50,7 @@ def login_oauth2(form_data: OAuth2PasswordRequestForm = Depends(), db: Session =
     token = create_access_token({"sub": user.username})
     return {"access_token": token, "token_type": "bearer"}
 
-@router.delete("/profile")
+@router.delete("/delete-profile")
 def delete_profile(
     current_user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)

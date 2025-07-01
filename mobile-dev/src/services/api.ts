@@ -142,7 +142,7 @@ class ApiService {
   }
 
   async deleteProfile(): Promise<void> {
-    await this.request('/auth/profile', {
+    await this.request('/auth/delete-profile', {
       method: 'DELETE',
     });
     // Clear stored data after successful deletion
