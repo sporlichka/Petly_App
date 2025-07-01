@@ -4,6 +4,8 @@ import {
   Text,
   StyleSheet,
   Alert,
+  ScrollView,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +14,7 @@ import * as Notifications from 'expo-notifications';
 import { User } from '../../types';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { Input } from '../../components/Input';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
 import { notificationService } from '../../services/notificationService';
@@ -27,6 +30,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [scheduledCount, setScheduledCount] = useState(0);
   const [isTestingNotification, setIsTestingNotification] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordErrors, setPasswordErrors] = useState<{[key: string]: string}>({});
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const { getAllScheduledCount } = useActivityNotifications();
 
@@ -101,40 +112,42 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
     }
   };
 
-  const handleTestActivityNotification = async () => {
+  const handleDisableAllNotifications = async () => {
     try {
-      setIsTestingNotification(true);
-      
-      // Schedule a test activity notification for 2 minutes from now
-      const testTime = new Date();
-      testTime.setMinutes(testTime.getMinutes() + 2);
-      
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '🐾 Test Activity Notification',
-          body: 'This is a test activity notification.',
-          sound: 'default',
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: testTime,
-        },
-      });
-      
       Alert.alert(
-        'Test Activity Notification Scheduled! 🐾',
-        'You should receive a test activity notification in 2 minutes.',
-        [{ text: 'OK' }]
+        'Disable All Notifications',
+        'Are you sure you want to disable all scheduled notifications? This will cancel all reminders for your pets.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disable All',
+            style: 'destructive',
+            onPress: async () => {
+              setIsLoading(true);
+              try {
+                const success = await notificationService.cancelAllNotifications();
+                if (success) {
+                  setScheduledCount(0);
+                  Alert.alert(
+                    'All Notifications Disabled ✅',
+                    'All scheduled notifications have been cancelled. You can re-enable them individually from the activities list.',
+                    [{ text: 'OK' }]
+                  );
+                } else {
+                  Alert.alert('Error', 'Failed to disable all notifications. Please try again.');
+                }
+              } catch (error) {
+                console.error('Failed to disable notifications:', error);
+                Alert.alert('Error', 'Failed to disable all notifications. Please try again.');
+              } finally {
+                setIsLoading(false);
+              }
+            },
+          },
+        ]
       );
     } catch (error) {
-      console.error('Failed to schedule test activity notification:', error);
-      Alert.alert(
-        'Test Failed',
-        'Unable to schedule test activity notification. Please check your notification permissions.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsTestingNotification(false);
+      console.error('Error in handleDisableAllNotifications:', error);
     }
   };
 
@@ -187,13 +200,130 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
     );
   };
 
+  const validatePasswordForm = (): boolean => {
+    const errors: {[key: string]: string} = {};
+
+    if (!passwordForm.currentPassword) {
+      errors.currentPassword = 'Current password is required';
+    }
+
+    if (!passwordForm.newPassword) {
+      errors.newPassword = 'New password is required';
+    } else if (passwordForm.newPassword.length < 6) {
+      errors.newPassword = 'Password must be at least 6 characters';
+    }
+
+    if (!passwordForm.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your new password';
+    } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (passwordForm.currentPassword === passwordForm.newPassword) {
+      errors.newPassword = 'New password must be different from current password';
+    }
+
+    setPasswordErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleChangePassword = () => {
-    Alert.alert('Change Password', 'This feature will be available soon!');
+    setShowPasswordModal(true);
+  };
+
+  const handleSubmitPasswordChange = async () => {
+    if (!validatePasswordForm()) return;
+
+    setIsChangingPassword(true);
+    try {
+      await apiService.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      
+      Alert.alert(
+        'Password Changed Successfully! ✅',
+        'Your password has been updated. You may need to log in again.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowPasswordModal(false);
+              setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+              setPasswordErrors({});
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to change password:', error);
+      Alert.alert(
+        'Password Change Failed',
+        error instanceof Error ? error.message : 'Failed to change password. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleDeleteProfile = () => {
+    Alert.alert(
+      'Delete Profile',
+      '⚠️ WARNING: This action cannot be undone!\n\nThis will permanently delete:\n• Your account\n• All your pets\n• All activity records\n• All data\n\nAre you absolutely sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'I understand, delete everything',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              'Final Confirmation',
+              'This is your last chance to cancel. Type DELETE to confirm permanent deletion.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete Forever',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setIsLoading(true);
+                    try {
+                      await apiService.deleteProfile();
+                      Alert.alert(
+                        'Profile Deleted',
+                        'Your profile has been permanently deleted.',
+                        [
+                          {
+                            text: 'OK',
+                            onPress: () => onLogout()
+                          }
+                        ]
+                      );
+                    } catch (error) {
+                      console.error('Failed to delete profile:', error);
+                      Alert.alert(
+                        'Deletion Failed',
+                        error instanceof Error ? error.message : 'Failed to delete profile. Please try again.',
+                        [{ text: 'OK' }]
+                      );
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.content}>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* User Info */}
         <Card variant="elevated" style={styles.userCard}>
           <View style={styles.userHeader}>
@@ -247,23 +377,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
           )}
 
           {notificationEnabled && (
-            <Button
-              title="Test Notification"
-              onPress={handleTestNotification}
-              loading={isTestingNotification}
-              variant="outline"
-              style={styles.testButton}
-            />
-          )}
-
-          {notificationEnabled && (
-            <Button
-              title="Test Activity Notification (2 min)"
-              onPress={handleTestActivityNotification}
-              loading={isTestingNotification}
-              variant="outline" 
-              style={[styles.testButton, { marginTop: 8 }]}
-            />
+            <>
+              <Button
+                title="Test Notification"
+                onPress={handleTestNotification}
+                loading={isTestingNotification}
+                variant="outline"
+                style={styles.testButton}
+              />
+              
+              <Button
+                title="Disable All Notifications"
+                onPress={handleDisableAllNotifications}
+                loading={isLoading}
+                variant="outline"
+                style={[styles.disableButton, { marginTop: 8 }]}
+                textStyle={styles.disableButtonText}
+              />
+            </>
           )}
         </View>
 
@@ -283,15 +414,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
               <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
             </View>
           </Card>
-        </View>
 
-        {/* App Info */}
-        <View style={styles.appInfo}>
-          <Text style={styles.appTitle}>PetCare App</Text>
-          <Text style={styles.appVersion}>Version 1.0.0</Text>
-          <Text style={styles.appDescription}>
-            Your trusted companion for pet health and activity tracking
-          </Text>
+          <Card
+            style={styles.settingCard}
+            onPress={handleDeleteProfile}
+          >
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="trash-outline" size={24} color={Colors.error} />
+                <Text style={[styles.settingText, { color: Colors.error }]}>Delete Profile</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
+            </View>
+          </Card>
         </View>
 
         {/* Logout Button */}
@@ -305,7 +440,79 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
             textStyle={styles.logoutText}
           />
         </View>
-      </View>
+
+        {/* App Info */}
+        <View style={styles.appInfo}>
+          <Text style={styles.appTitle}>PetCare App</Text>
+          <Text style={styles.appVersion}>Version 1.0.0</Text>
+          <Text style={styles.appDescription}>
+            Your trusted companion for pet health and activity tracking
+          </Text>
+        </View>
+
+        {/* Password Change Modal */}
+        <Modal
+          visible={showPasswordModal}
+          animationType="slide"
+          presentationStyle="formSheet"
+          onRequestClose={() => setShowPasswordModal(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Change Password</Text>
+              <Button
+                title="Cancel"
+                variant="text"
+                onPress={() => {
+                  setShowPasswordModal(false);
+                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setPasswordErrors({});
+                }}
+                textStyle={styles.cancelButtonText}
+              />
+            </View>
+
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <Input
+                label="Current Password"
+                placeholder="Enter your current password"
+                value={passwordForm.currentPassword}
+                onChangeText={(text) => setPasswordForm(prev => ({ ...prev, currentPassword: text }))}
+                error={passwordErrors.currentPassword}
+                secureTextEntry
+                leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.textSecondary} />}
+              />
+
+              <Input
+                label="New Password"
+                placeholder="Enter your new password"
+                value={passwordForm.newPassword}
+                onChangeText={(text) => setPasswordForm(prev => ({ ...prev, newPassword: text }))}
+                error={passwordErrors.newPassword}
+                secureTextEntry
+                leftIcon={<Ionicons name="key-outline" size={20} color={Colors.textSecondary} />}
+              />
+
+              <Input
+                label="Confirm New Password"
+                placeholder="Confirm your new password"
+                value={passwordForm.confirmPassword}
+                onChangeText={(text) => setPasswordForm(prev => ({ ...prev, confirmPassword: text }))}
+                error={passwordErrors.confirmPassword}
+                secureTextEntry
+                leftIcon={<Ionicons name="checkmark-circle-outline" size={20} color={Colors.textSecondary} />}
+              />
+
+              <Button
+                title="Change Password"
+                onPress={handleSubmitPasswordChange}
+                loading={isChangingPassword}
+                style={styles.changePasswordButton}
+              />
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -317,7 +524,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 24,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingTop: 24, // Reduced top padding to bring user data closer to top
+    paddingHorizontal: 24,
+    paddingBottom: 100, // Bottom padding for tab navigation
   },
   userCard: {
     marginBottom: 32,
@@ -377,7 +589,7 @@ const styles = StyleSheet.create({
   },
   appInfo: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginTop: 40,
   },
   appTitle: {
     fontSize: 20,
@@ -397,7 +609,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   logoutContainer: {
-    marginTop: 'auto',
+    marginTop: 40,
   },
   logoutButton: {
     borderColor: Colors.error,
@@ -426,5 +638,38 @@ const styles = StyleSheet.create({
   testButton: {
     marginTop: 12,
     borderColor: Colors.success,
+  },
+  disableButton: {
+    borderColor: Colors.error,
+  },
+  disableButtonText: {
+    color: Colors.error,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  cancelButtonText: {
+    color: Colors.primary,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 24,
+  },
+  changePasswordButton: {
+    marginTop: 24,
   },
 }); 

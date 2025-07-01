@@ -127,7 +127,9 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   const handleNext = () => {
     const combinedDateTime = {
       ...activityData,
-      ...dateTimeData,
+      // Convert Date objects to ISO strings for navigation serialization
+      date: dateTimeData.date.toISOString(),
+      time: dateTimeData.time.toISOString(),
     };
     
     navigation.navigate('SetRepeat', { 

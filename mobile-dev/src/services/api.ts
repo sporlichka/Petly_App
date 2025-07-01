@@ -17,7 +17,7 @@ import {
   ApiError
 } from '../types';
 
-const API_BASE_URL = 'http://192.168.0.13:8000'; // Your backend IP address
+const API_BASE_URL = 'http://10.68.96.183:8000'; // Your backend IP address
 
 class ApiService {
   private async getAuthHeaders(): Promise<Record<string, string>> {
@@ -129,6 +129,25 @@ class ApiService {
     await AsyncStorage.removeItem('access_token');
     await AsyncStorage.removeItem('user');
     console.log('🔑 Logged out - tokens cleared');
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.request('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+  }
+
+  async deleteProfile(): Promise<void> {
+    await this.request('/auth/delete-profile', {
+      method: 'DELETE',
+    });
+    // Clear stored data after successful deletion
+    await AsyncStorage.removeItem('access_token');
+    await AsyncStorage.removeItem('user');
   }
 
   // Pet endpoints

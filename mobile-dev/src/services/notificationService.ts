@@ -371,6 +371,17 @@ export class NotificationService {
     }
   }
 
+  async cancelAllNotifications(): Promise<boolean> {
+    try {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      console.log('✅ Cancelled all scheduled notifications');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to cancel all notifications:', error);
+      return false;
+    }
+  }
+
   // Helper method to check if notifications are available and enabled
   async isNotificationEnabled(): Promise<boolean> {
     if (!Device.isDevice) {

@@ -519,9 +519,14 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
         </ScrollView>
 
         {/* Floating Add Button */}
-        <TouchableOpacity style={styles.fab} onPress={handleAddActivity}>
-          <Ionicons name="add" size={28} color="#ffffff" />
-        </TouchableOpacity>
+        <View style={styles.fab}>
+          <Button
+            title="+ Add Record"
+            onPress={handleAddActivity}
+            variant="secondary"
+            size="small"
+          />
+        </View>
 
         {/* Pet Selector Modal */}
         {showPetSelector && (
@@ -661,17 +666,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 24,
     right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
   },
   modalOverlay: {
     position: 'absolute',

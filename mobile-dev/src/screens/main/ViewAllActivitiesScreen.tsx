@@ -279,7 +279,7 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
   };
 
   const isNotificationsEnabled = (activity: ActivityRecord): boolean => {
-    return activity.notify === true;
+    return Boolean(activity.notify);
   };
 
   const renderActivityItem = ({ item }: { item: ActivityRecord }) => {

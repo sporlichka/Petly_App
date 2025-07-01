@@ -131,7 +131,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           date: localDateTimeString,
           time: localDateTimeString,
           repeat: activityData.repeat === 'none' ? undefined : activityData.repeat,
-          notify: activityData.notifications || true,
+          notify: activityData.notifications !== undefined ? activityData.notifications : true,
           notes: activityData.notes || undefined,
           food_type: activityData.food_type || undefined,
           quantity: activityData.quantity || undefined,
@@ -139,6 +139,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
         };
 
         console.log('Updating activity record:', activityUpdate);
+        console.log('activityData.notifications value:', activityData.notifications, 'Type:', typeof activityData.notifications);
         const updatedActivity = await apiService.updateActivityRecord(editActivity.id, activityUpdate);
         
         // Handle notification scheduling for updated activity
@@ -179,7 +180,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           date: localDateTimeString,
           time: localDateTimeString,
           repeat: activityData.repeat === 'none' ? undefined : activityData.repeat,
-          notify: activityData.notifications || true,
+          notify: activityData.notifications !== undefined ? activityData.notifications : true,
           notes: activityData.notes || undefined,
           food_type: activityData.food_type || undefined,
           quantity: activityData.quantity || undefined,
@@ -187,6 +188,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
         };
 
         console.log('Creating activity record:', activityRecord);
+        console.log('activityData.notifications value:', activityData.notifications, 'Type:', typeof activityData.notifications);
         const createdActivity = await apiService.createActivityRecord(activityRecord);
         
         // Handle notification scheduling for new activity
