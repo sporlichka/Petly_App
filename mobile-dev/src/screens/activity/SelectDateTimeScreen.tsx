@@ -10,11 +10,11 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 import { ActivityStackParamList, DateTimeData } from '../../types';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { DateTimePickerModal } from '../../components/DateTimePickerModal';
 import { Colors } from '../../constants/Colors';
 
 type SelectDateTimeScreenNavigationProp = StackNavigationProp<ActivityStackParamList, 'SelectDateTime'>;
@@ -33,11 +33,22 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   const isEditMode = !!editActivity;
   
   const [dateTimeData, setDateTimeData] = useState<DateTimeData>(() => {
+    const now = new Date();
+    
     // Pre-populate with existing data if in edit mode
     if (isEditMode && editActivity) {
+      const activityDate = new Date(editActivity.date);
+      const activityTime = new Date(editActivity.time);
+      
+      // Create proper time object with today's date but activity's time
+      const timeToUse = isNaN(activityTime.getTime()) ? now : 
+        new Date(now.getFullYear(), now.getMonth(), now.getDate(),
+                activityTime.getHours(), activityTime.getMinutes(), activityTime.getSeconds());
+      
+      // Ensure dates are valid
       return {
-        date: new Date(editActivity.date),
-        time: new Date(editActivity.time),
+        date: isNaN(activityDate.getTime()) ? now : activityDate,
+        time: timeToUse,
       };
     }
     
@@ -45,14 +56,14 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
     if (preselectedDate) {
       const selectedDate = new Date(preselectedDate);
       return {
-        date: selectedDate,
-        time: new Date(), // Current time
+        date: isNaN(selectedDate.getTime()) ? now : selectedDate,
+        time: now, // Current time
       };
     }
     
     return {
-      date: new Date(),
-      time: new Date(),
+      date: now,
+      time: now,
     };
   });
   
@@ -122,7 +133,11 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
 
   const handleTimeConfirm = (selectedTime: Date) => {
     setShowTimePicker(false);
-    setDateTimeData(prev => ({ ...prev, time: selectedTime }));
+    // Create a new time object with proper time values
+    const today = new Date();
+    const timeToSet = new Date(today.getFullYear(), today.getMonth(), today.getDate(),
+                              selectedTime.getHours(), selectedTime.getMinutes(), selectedTime.getSeconds());
+    setDateTimeData(prev => ({ ...prev, time: timeToSet }));
   };
 
   const handleDateCancel = () => {
@@ -150,9 +165,14 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   };
 
   const handleQuickTimeSelect = (time: Date) => {
+    // Create a proper time object for today with the selected time
+    const today = new Date();
+    const selectedTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 
+                                 time.getHours(), time.getMinutes(), time.getSeconds());
+    
     // When selecting a future time, also set the date to today if it's not already set to future
-    const selectedDate = time > new Date() ? new Date() : dateTimeData.date;
-    setDateTimeData(prev => ({ ...prev, time, date: selectedDate }));
+    const selectedDate = time > new Date() ? today : dateTimeData.date;
+    setDateTimeData(prev => ({ ...prev, time: selectedTime, date: selectedDate }));
   };
 
   const handleNext = () => {
@@ -267,17 +287,21 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
           <DateTimePickerModal
             isVisible={showDatePicker}
             mode="date"
-            date={dateTimeData.date}
+            value={dateTimeData.date}
             onConfirm={handleDateConfirm}
             onCancel={handleDateCancel}
+            minimumDate={new Date(new Date().getFullYear() - 2, 0, 1)} // 2 years ago
+            maximumDate={new Date(new Date().getFullYear() + 1, 11, 31)} // 1 year ahead
+            title="Select Activity Date"
           />
 
           <DateTimePickerModal
             isVisible={showTimePicker}
             mode="time"
-            date={dateTimeData.time}
+            value={dateTimeData.time}
             onConfirm={handleTimeConfirm}
             onCancel={handleTimeCancel}
+            title="Select Activity Time"
           />
         </View>
       </SafeAreaView>

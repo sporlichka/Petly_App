@@ -13,13 +13,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { HomeStackParamList, PetCreate, PetFormData, PetGender } from '../../types';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
 import { GenderPicker } from '../../components/GenderPicker';
+import { DateTimePickerModal } from '../../components/DateTimePickerModal';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
 
@@ -119,11 +119,13 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
     });
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
+  const onDateConfirm = (selectedDate: Date) => {
     setShowDatePicker(false);
-    if (selectedDate) {
-      updateFormData('birthdate', selectedDate);
-    }
+    updateFormData('birthdate', selectedDate);
+  };
+
+  const onDateCancel = () => {
+    setShowDatePicker(false);
   };
 
   return (
@@ -209,15 +211,16 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
 
-              {showDatePicker && (
-                <DateTimePicker
-                  value={formData.birthdate}
-                  mode="date"
-                  display="default"
-                  onChange={onDateChange}
-                  maximumDate={new Date()}
-                />
-              )}
+              <DateTimePickerModal
+                isVisible={showDatePicker}
+                mode="date"
+                value={formData.birthdate}
+                onConfirm={onDateConfirm}
+                onCancel={onDateCancel}
+                maximumDate={new Date()}
+                title="Select Birthdate"
+                confirmButtonText="Apply"
+              />
 
               <Input
                 label="Weight (kg) *"

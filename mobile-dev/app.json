@@ -26,7 +26,8 @@
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "WAKE_LOCK"
-      ]
+      ],
+      "package": "com.tabchny.vetlyai"
     },
     "web": {
       "favicon": "./assets/vetly-logo.png"
@@ -37,9 +38,16 @@
         {
           "icon": "./assets/vetly-logo.png",
           "color": "#FFC107",
-          "sounds": ["./assets/notification.wav"]
+          "sounds": [
+            "./assets/notification.wav"
+          ]
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1b467ab6-4e62-4001-b4e1-4e73b25e0cdc"
+      }
+    }
   }
 }

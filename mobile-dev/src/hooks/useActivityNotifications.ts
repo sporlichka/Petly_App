@@ -52,13 +52,19 @@ export const useActivityNotifications = () => {
 
   const scheduleActivityNotification = useCallback(async (activity: ActivityRecord): Promise<boolean> => {
     try {
+      console.log(`🔔 Starting notification scheduling for activity ${activity.id}`);
+      console.log(`  - Activity notify: ${activity.notify}`);
+      console.log(`  - Activity date: ${activity.date}`);
+      
       // Don't schedule if notifications are disabled
       if (!activity.notify) {
+        console.log(`❌ Notifications disabled for activity ${activity.id}`);
         return false;
       }
 
       // Check if notification service is available
       const isAvailable = await notificationService.isNotificationEnabled();
+      console.log(`📱 Notification service available: ${isAvailable}`);
       if (!isAvailable) {
         console.log(`📱 Notification service not available for activity ${activity.id}`);
         return false;
@@ -69,10 +75,13 @@ export const useActivityNotifications = () => {
       console.log(`🐾 Found pet name: ${petName} for activity ${activity.id}`);
 
       // Cancel existing notification if any
-      await cancelActivityNotification(activity.id);
+      const cancelResult = await cancelActivityNotification(activity.id);
+      console.log(`🗑️ Cancel existing notification result: ${cancelResult}`);
 
       // Schedule new notification with pet name
+      console.log(`📅 Calling notificationService.scheduleActivityNotification...`);
       const notificationId = await notificationService.scheduleActivityNotification(activity, petName);
+      console.log(`📅 Notification service returned: ${notificationId}`);
       
       if (notificationId) {
         // Store the notification ID locally
@@ -90,12 +99,13 @@ export const useActivityNotifications = () => {
         return true;
       }
 
+      console.log(`❌ Failed to get notification ID for activity ${activity.id}`);
       return false;
     } catch (error) {
       console.error('❌ Failed to schedule activity notification:', error);
       return false;
     }
-  }, [notificationStorage, cancelActivityNotification]);
+  }, [notificationStorage]);
 
   const cancelActivityNotification = useCallback(async (activityId: number): Promise<boolean> => {
     try {
@@ -166,7 +176,7 @@ export const useActivityNotifications = () => {
       console.error('Failed to reschedule activity notification:', error);
       return false;
     }
-  }, [notificationStorage, cancelActivityNotification, getPetName]);
+  }, [notificationStorage]);
 
   const isNotificationScheduled = useCallback((activityId: number): boolean => {
     return !!notificationStorage[activityId];

@@ -125,6 +125,38 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
     }
   };
 
+  const handleTestNotificationService = async () => {
+    try {
+      setIsTestingNotification(true);
+      
+      console.log(`🧪 Testing NotificationService directly...`);
+      const notificationId = await notificationService.scheduleTestNotification();
+      
+      if (notificationId) {
+        Alert.alert(
+          'NotificationService Test Scheduled! 🧪',
+          `Test notification scheduled with ID: ${notificationId}. You should receive it in 10 seconds.`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'NotificationService Test Failed',
+          'NotificationService.scheduleTestNotification() returned null. Check console logs for details.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to test NotificationService:', error);
+      Alert.alert(
+        'NotificationService Test Failed',
+        'Error testing NotificationService. Check console logs for details.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsTestingNotification(false);
+    }
+  };
+
   const handleTestExtensionReminder = async () => {
     try {
       // Schedule extension reminder for 10 seconds from now
@@ -708,6 +740,14 @@ ${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
 
             {__DEV__ && (
               <>
+                <Button
+                  title="🧪 Test NotificationService"
+                  onPress={handleTestNotificationService}
+                  loading={isTestingNotification}
+                  variant="outline"
+                  style={[styles.testButton, { marginTop: 8 }]}
+                />
+                
                 <Button
                   title="⏰ Test Extension Reminder (10s)"
                   onPress={handleTestExtensionReminder}

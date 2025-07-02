@@ -119,22 +119,28 @@ export class NotificationService {
 
   async scheduleActivityNotification(activity: ActivityRecord, petName?: string): Promise<string | null> {
     try {
+      console.log(`🔔 NotificationService: Starting schedule for activity ${activity.id}`);
+      
       if (!this.isInitialized) {
+        console.log(`🔔 NotificationService: Not initialized, attempting to initialize...`);
         const initialized = await this.initialize();
+        console.log(`🔔 NotificationService: Initialization result: ${initialized}`);
         if (!initialized) {
+          console.log(`❌ NotificationService: Initialization failed, cannot schedule notification`);
           return null;
         }
       }
 
       // Don't schedule if notifications are disabled for this activity
       if (!activity.notify) {
-        console.log(`Notifications disabled for activity ${activity.id}, skipping`);
+        console.log(`❌ NotificationService: Notifications disabled for activity ${activity.id}, skipping`);
         return null;
       }
 
       // Parse the date and time properly handling timezone
       // The activity.date comes as local time string like "2024-12-26T15:30:00"
       // We need to ensure it's interpreted as local time, not UTC
+      console.log(`🕐 NotificationService: Parsing activity date: ${activity.date}`);
       const triggerDate = this.parseActivityDate(activity.date);
       const now = new Date();
 
@@ -155,6 +161,7 @@ export class NotificationService {
       }
 
       // Create notification content
+      console.log(`📝 NotificationService: Creating notification content...`);
       const notificationContent: Notifications.NotificationContentInput = {
         title: `🐾 ${activity.title}`,
         body: this.createNotificationBody(activity, petName),
@@ -165,12 +172,15 @@ export class NotificationService {
           category: activity.category,
         },
       };
+      console.log(`📝 NotificationService: Notification content created:`, notificationContent);
 
       // Schedule the notification
+      console.log(`⏰ NotificationService: Creating trigger...`);
       const trigger: Notifications.NotificationTriggerInput = this.createTrigger(activity, triggerDate);
       
       console.log(`📅 Creating trigger:`, trigger);
       
+      console.log(`📤 NotificationService: Scheduling notification with Expo...`);
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: notificationContent,
         trigger,
@@ -180,7 +190,14 @@ export class NotificationService {
       return notificationId;
 
     } catch (error) {
-      console.error('❌ Failed to schedule notification:', error);
+      console.error('❌ NotificationService: Failed to schedule notification:', error);
+      console.error('❌ NotificationService: Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        activityId: activity.id,
+        activityDate: activity.date,
+        notify: activity.notify
+      });
       return null;
     }
   }
@@ -191,43 +208,66 @@ export class NotificationService {
     
     console.log(`🕐 Parsing activity date: ${dateString}`);
     
-    // Method 1: Parse components manually to ensure local time interpretation
-    const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
-    if (match) {
-      const [_, year, month, day, hour, minute, second] = match;
-      // Date constructor with individual components always creates local time
-      const parsedDate = new Date(
-        parseInt(year, 10),
-        parseInt(month, 10) - 1, // Month is 0-based
-        parseInt(day, 10),
-        parseInt(hour, 10),
-        parseInt(minute, 10),
-        parseInt(second, 10)
-      );
+    try {
+      // Method 1: Parse components manually to ensure local time interpretation
+      const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
+      if (match) {
+        const [_, year, month, day, hour, minute, second] = match;
+        // Date constructor with individual components always creates local time
+        const parsedDate = new Date(
+          parseInt(year, 10),
+          parseInt(month, 10) - 1, // Month is 0-based
+          parseInt(day, 10),
+          parseInt(hour, 10),
+          parseInt(minute, 10),
+          parseInt(second, 10)
+        );
+        
+        // Validate the parsed date
+        if (isNaN(parsedDate.getTime())) {
+          throw new Error(`Invalid date components from ${dateString}`);
+        }
+        
+        console.log(`✅ Manual parsing result:`, {
+          input: dateString,
+          components: { year, month: parseInt(month, 10) - 1, day, hour, minute, second },
+          result: parsedDate.toISOString(),
+          local: parsedDate.toLocaleString(),
+          timestamp: parsedDate.getTime()
+        });
+        
+        return parsedDate;
+      }
       
-      console.log(`✅ Manual parsing result:`, {
-        input: dateString,
-        components: { year, month: parseInt(month, 10) - 1, day, hour, minute, second },
-        result: parsedDate.toISOString(),
-        local: parsedDate.toLocaleString(),
-        timestamp: parsedDate.getTime()
+      // Method 2: Try parsing with simpler approach
+      console.log(`⚠️ Date string doesn't match expected format, trying simpler parsing`);
+      
+      // Remove the 'T' and replace with space, then parse
+      const normalizedDate = dateString.replace('T', ' ');
+      const date = new Date(normalizedDate);
+      
+      if (isNaN(date.getTime())) {
+        throw new Error(`Unable to parse date: ${dateString}`);
+      }
+      
+      console.log(`⚠️ Fallback date parsing successful:`, {
+        original: dateString,
+        normalized: normalizedDate,
+        parsed: date.toISOString(),
+        local: date.toLocaleString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       });
       
-      return parsedDate;
+      return date;
+      
+    } catch (error) {
+      console.error(`❌ Failed to parse activity date: ${dateString}`, error);
+      // Return current time + 1 minute as emergency fallback
+      const fallbackDate = new Date();
+      fallbackDate.setMinutes(fallbackDate.getMinutes() + 1);
+      console.log(`🆘 Using emergency fallback date: ${fallbackDate.toLocaleString()}`);
+      return fallbackDate;
     }
-    
-    // Fallback: If the string doesn't match expected format
-    console.warn(`⚠️ Date string doesn't match expected format, using fallback`);
-    const date = new Date(dateString);
-    
-    console.log(`⚠️ Fallback date parsing:`, {
-      original: dateString,
-      parsed: date.toISOString(),
-      local: date.toLocaleString(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    });
-    
-    return date;
   }
 
   private createNotificationBody(activity: ActivityRecord, petName?: string): string {
@@ -267,9 +307,12 @@ export class NotificationService {
     console.log(`🎯 Creating trigger for activity ${activity.id}, repeat: ${activity.repeat}`);
     console.log(`  - Trigger date: ${triggerDate.toLocaleString()}`);
     console.log(`  - Hour: ${triggerDate.getHours()}, Minute: ${triggerDate.getMinutes()}`);
+    console.log(`  - Date object valid: ${!isNaN(triggerDate.getTime())}`);
+    console.log(`  - Date timestamp: ${triggerDate.getTime()}`);
     
     // Handle repeat notifications
     if (activity.repeat && activity.repeat !== 'none') {
+      console.log(`🔄 Activity has repeat: ${activity.repeat}`);
       switch (activity.repeat) {
         case 'daily':
           console.log(`  - Creating DAILY trigger for ${triggerDate.getHours()}:${triggerDate.getMinutes()}`);
@@ -305,11 +348,18 @@ export class NotificationService {
     }
 
     // One-time notification
-    console.log(`  - Creating ONE-TIME trigger for ${triggerDate.toISOString()}`);
-    return {
+    console.log(`📅 Activity has no repeat (${activity.repeat}), creating ONE-TIME trigger`);
+    console.log(`  - Using date trigger type`);
+    console.log(`  - Trigger date: ${triggerDate.toISOString()}`);
+    console.log(`  - Trigger date local: ${triggerDate.toLocaleString()}`);
+    
+    const trigger = {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: triggerDate,
     };
+    
+    console.log(`📅 One-time trigger created:`, trigger);
+    return trigger;
   }
 
   async cancelNotification(notificationId: string): Promise<boolean> {
@@ -460,6 +510,46 @@ export class NotificationService {
 
     const { status } = await Notifications.getPermissionsAsync();
     return status === 'granted';
+  }
+
+  // Test method to schedule a simple notification for debugging
+  async scheduleTestNotification(): Promise<string | null> {
+    try {
+      console.log(`🧪 Testing basic notification scheduling...`);
+      
+      if (!this.isInitialized) {
+        const initialized = await this.initialize();
+        if (!initialized) {
+          console.log(`❌ Test: Initialization failed`);
+          return null;
+        }
+      }
+
+      // Schedule a notification for 10 seconds from now
+      const testDate = new Date();
+      testDate.setSeconds(testDate.getSeconds() + 10);
+      
+      console.log(`🧪 Test: Scheduling notification for ${testDate.toLocaleString()}`);
+      
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🧪 Test Notification',
+          body: 'This is a test notification to verify the service works',
+          sound: 'default',
+          data: { test: true },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: testDate,
+        },
+      });
+
+      console.log(`🧪 Test: Scheduled test notification ${notificationId}`);
+      return notificationId;
+    } catch (error) {
+      console.error('🧪 Test: Failed to schedule test notification:', error);
+      return null;
+    }
   }
 }
 

@@ -262,7 +262,7 @@ export const ChatScreen: React.FC = () => {
       <KeyboardAvoidingView 
         style={styles.chatContainer} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={0}
       >
         {/* Messages */}
         <FlatList

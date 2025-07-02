@@ -12,6 +12,7 @@ export const Colors = {
   background: '#FAFAFA',
   surface: '#FFFFFF',
   cardBackground: '#FFFFFF',
+  white: '#FFFFFF',
   
   // Text colors
   text: '#2E2E2E',
