@@ -6,11 +6,9 @@ import {
   Alert,
   ScrollView,
   Modal,
-  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Notifications from 'expo-notifications';
 
 import { User } from '../../types';
 import { Button } from '../../components/Button';
@@ -20,7 +18,6 @@ import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
 import { notificationService } from '../../services/notificationService';
 import { useActivityNotifications } from '../../hooks/useActivityNotifications';
-import { setDevelopmentMode, getDevelopmentMode, loadDevelopmentMode } from '../../utils/repeatHelpers';
 
 interface SettingsScreenProps {
   onLogout: () => void;
@@ -31,7 +28,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [scheduledCount, setScheduledCount] = useState(0);
-  const [isTestingNotification, setIsTestingNotification] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -40,24 +36,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   });
   const [passwordErrors, setPasswordErrors] = useState<{[key: string]: string}>({});
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [testNotificationMode, setTestNotificationMode] = useState(false);
 
   const { getAllScheduledCount } = useActivityNotifications();
 
   useEffect(() => {
     loadUserInfo();
     loadNotificationStatus();
-    loadTestModeState();
   }, []);
-
-  const loadTestModeState = async () => {
-    try {
-      const devMode = await loadDevelopmentMode();
-      setTestNotificationMode(devMode);
-    } catch (error) {
-      console.error('Failed to load test mode state:', error);
-    }
-  };
 
   const loadUserInfo = async () => {
     try {
@@ -88,339 +73,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
     }
   };
 
-  const handleTestNotification = async () => {
-    try {
-      setIsTestingNotification(true);
-      
-      // Schedule a test notification for 5 seconds from now
-      const testTime = new Date();
-      testTime.setSeconds(testTime.getSeconds() + 5);
-      
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '🐾 Test Notification',
-          body: 'Your Vetly AI notifications are working correctly!',
-          sound: 'default',
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: testTime,
-        },
-      });
-      
-      Alert.alert(
-        'Test Notification Scheduled! 📱',
-        'You should receive a test notification in 5 seconds.',
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Failed to schedule test notification:', error);
-      Alert.alert(
-        'Test Failed',
-        'Unable to schedule test notification. Please check your notification permissions.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsTestingNotification(false);
-    }
-  };
-
-  const handleTestNotificationService = async () => {
-    try {
-      setIsTestingNotification(true);
-      
-      console.log(`🧪 Testing NotificationService directly...`);
-      const notificationId = await notificationService.scheduleTestNotification();
-      
-      if (notificationId) {
-        Alert.alert(
-          'NotificationService Test Scheduled! 🧪',
-          `Test notification scheduled with ID: ${notificationId}. You should receive it in 10 seconds.`,
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert(
-          'NotificationService Test Failed',
-          'NotificationService.scheduleTestNotification() returned null. Check console logs for details.',
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error) {
-      console.error('Failed to test NotificationService:', error);
-      Alert.alert(
-        'NotificationService Test Failed',
-        'Error testing NotificationService. Check console logs for details.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsTestingNotification(false);
-    }
-  };
-
-  const handleTestExtensionReminder = async () => {
-    try {
-      // Schedule extension reminder for 10 seconds from now
-      const testTime = new Date();
-      testTime.setSeconds(testTime.getSeconds() + 10);
-      
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '⏰ Расписание активности завершилось',
-          body: 'Хотите продлить расписание "Test Activity" на следующие дни?',
-          sound: 'default',
-          data: {
-            type: 'repeat-extension',
-            activityId: 999,
-            originalRepeat: 'daily',
-            petId: 1,
-            category: 'FEEDING',
-          },
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: testTime,
-        },
-      });
-      
-      Alert.alert(
-        'Extension Reminder Scheduled! ⏰',
-        'You should receive an extension reminder in 10 seconds.',
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Failed to schedule extension reminder:', error);
-      Alert.alert(
-        'Test Failed',
-        'Unable to schedule extension reminder. Please check your notification permissions.',
-        [{ text: 'OK' }]
-      );
-    }
-  };
-
-  const handleDebugNotifications = async () => {
-    try {
-      const { activityNotifications, extensionReminders, other } = await notificationService.getAllNotificationsByType();
-      
-      const totalCount = activityNotifications.length + extensionReminders.length + other.length;
-      
-      const debugInfo = `📊 Notification Debug Info:
-
-📱 Total Scheduled: ${totalCount}
-🔔 Activity Notifications: ${activityNotifications.length}
-⏰ Extension Reminders: ${extensionReminders.length}
-📝 Other Notifications: ${other.length}
-
-${extensionReminders.length > 0 ? 
-  `\n⏰ Extension Reminders:\n${extensionReminders.map((n, i) => 
-    `${i + 1}. Activity ${n.content.data?.activityId} - ${new Date(n.trigger.value).toLocaleString()}`
-  ).join('\n')}` : 
-  '\n⏰ No extension reminders found'
-}
-
-${activityNotifications.length > 0 ? 
-  `\n🔔 Activity Notifications:\n${activityNotifications.slice(0, 3).map((n, i) => 
-    `${i + 1}. Activity ${n.content.data?.activityId} - ${n.content.title}`
-  ).join('\n')}${activityNotifications.length > 3 ? '\n...' : ''}` : 
-  '\n🔔 No activity notifications found'
-}`;
-
-      Alert.alert(
-        'Notification Debug',
-        debugInfo,
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Failed to debug notifications:', error);
-      Alert.alert('Debug Failed', 'Unable to get notification information.');
-    }
-  };
-
-  const handleNotificationInfo = () => {
-    Alert.alert(
-      'Notification System Info',
-      `📱 How notifications work in Vetly AI:
-
-🔄 REPEAT ACTIVITIES:
-• Daily: Creates 8 activities (1+7 repeats) with individual notifications for each day
-• Weekly: Creates 5 activities (1+4 repeats) with individual notifications for each week  
-• Monthly: Creates 4 activities (1+3 repeats) with individual notifications for each month
-
-⏰ TIMING:
-• Each repeat activity gets its own separate notification scheduled for the exact date/time
-• Monthly activities will receive notifications exactly 1, 2, and 3 months after the original
-
-🔔 RELIABILITY:
-• Daily/Weekly: Very reliable (system repeating notifications)
-• Monthly: Reliable (individual date-based notifications)
-
-⚠️ LIMITATIONS:
-• Notifications may not work if app is uninstalled/data cleared
-• System may limit notifications scheduled far in the future
-• Battery optimization settings can affect delivery
-
-💡 TIP: Use Debug button to see all scheduled notifications!`,
-      [{ text: 'Got it!' }]
-    );
-  };
-
-  const handleTestExtensionModal = async () => {
-    try {
-      // Получаем реального питомца пользователя для тестирования
-      const pets = await apiService.getPets();
-      
-      if (pets.length === 0) {
-        Alert.alert(
-          'No Pets Found',
-          'Please add a pet to the app first to test the extension modal.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const firstPet = pets[0];
-      const { extensionModalService } = await import('../../services/extensionModalService');
-      
-      // Планируем тестовое модальное окно на текущее время с реальным питомцем
-      await extensionModalService.scheduleExtensionModal({
-        activityId: 999, // Тестовый ID
-        activityTitle: `Test walk for ${firstPet.name}`,
-        originalRepeat: 'daily',
-        petId: firstPet.id,
-        category: 'ACTIVITY',
-        scheduledDate: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      });
-      
-      Alert.alert(
-        '📋 Test Extension Modal Scheduled',
-        `Created test extension modal for pet "${firstPet.name}". The modal should appear on next app restart or check via "Check Extension Modals".`,
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Failed to test extension modal:', error);
-              Alert.alert(
-          'Error', 
-          error instanceof Error && error.message.includes('Pet not found') 
-            ? 'Pet not found. Make sure you have pets in the app.'
-            : 'Failed to schedule test extension modal'
-        );
-    }
-  };
-
-  const handleDebugExtensionModals = async () => {
-    try {
-      const { extensionModalService } = await import('../../services/extensionModalService');
-      
-      const queue = await extensionModalService.getModalQueue();
-      const pending = await extensionModalService.getPendingModals();
-      
-      const debugText = `
-📋 Extension Modals Debug:
-
-📊 Total queued: ${Object.keys(queue).length}
-🔔 Ready to show: ${pending.length}
-
-📋 Queued Modals:
-${Object.entries(queue).map(([key, data]) => {
-  const scheduledDate = new Date(data.scheduledDate);
-  const isPending = scheduledDate <= new Date();
-  return `• ${data.activityTitle} (ID: ${data.activityId})
-  📅 Scheduled: ${scheduledDate.toLocaleString()}
-  🔄 Repeat: ${data.originalRepeat}
-  ${isPending ? '🟢 READY' : '🔵 WAITING'}`;
-}).join('\n\n')}
-
-${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
-      `.trim();
-
-      Alert.alert('📋 Extension Modals Debug', debugText);
-    } catch (error) {
-      console.error('Failed to debug extension modals:', error);
-      Alert.alert('Error', 'Failed to get extension modals information');
-    }
-  };
-
-  const handleForceCheckExtensionModals = async () => {
-    try {
-      const { extensionModalService } = await import('../../services/extensionModalService');
-      
-      const pending = await extensionModalService.getPendingModals();
-      
-      if (pending.length > 0) {
-        Alert.alert(
-          '📋 Ready Extension Modals Found!',
-          `Found ${pending.length} extension modals ready to show. Restart the app to see them.`,
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert(
-          '📋 No Extension Modals Found',
-          'No extension modals ready to show.',
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error) {
-      console.error('Failed to check extension modals:', error);
-      Alert.alert('Error', 'Failed to check extension modals');
-    }
-  };
-
-  const handleTestWithPetSelection = async () => {
-    try {
-      const pets = await apiService.getPets();
-      
-      if (pets.length === 0) {
-        Alert.alert(
-          'No Pets Found',
-          'Please add a pet to the app first for testing.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      // Создаем кнопки для каждого питомца
-      const petButtons = pets.slice(0, 3).map(pet => ({
-        text: `🐾 ${pet.name}`,
-        onPress: async () => {
-          try {
-            const { extensionModalService } = await import('../../services/extensionModalService');
-            
-            await extensionModalService.scheduleExtensionModal({
-              activityId: 888, // Другой тестовый ID
-              activityTitle: `Test activity for ${pet.name}`,
-              originalRepeat: 'weekly', // Тестируем weekly
-              petId: pet.id,
-              category: 'FEEDING',
-              scheduledDate: new Date().toISOString(),
-              createdAt: new Date().toISOString(),
-            });
-            
-            Alert.alert(
-              '✅ Extension Modal Created!',
-              `Created test extension modal for pet "${pet.name}" with weekly repeat.`,
-              [{ text: 'OK' }]
-            );
-          } catch (error) {
-            console.error('Failed to create modal for pet:', error);
-            Alert.alert('Error', `Failed to create extension modal for ${pet.name}`);
-          }
-        },
-      }));
-
-      // Добавляем кнопку отмены
-      petButtons.push({ text: 'Cancel', style: 'cancel' as any });
-
-      Alert.alert(
-        '🐾 Select Pet for Testing',
-        'For which pet would you like to create a test extension modal?',
-        petButtons
-      );
-    } catch (error) {
-      console.error('Failed to load pets for testing:', error);
-      Alert.alert('Error', 'Failed to load pets list');
-    }
-  };
-
   const handleDisableAllNotifications = async () => {
     try {
       Alert.alert(
@@ -440,7 +92,7 @@ ${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
                   Alert.alert(
                     'All Notifications Disabled ✅',
                     'All scheduled notifications have been cancelled. You can re-enable them individually from the activities list.',
-        [{ text: 'OK' }]
+                    [{ text: 'OK' }]
                   );
                 } else {
                   Alert.alert('Error', 'Failed to disable all notifications. Please try again.');
@@ -573,27 +225,6 @@ ${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
     }
   };
 
-  const handleTestModeToggle = async (enabled: boolean) => {
-    setTestNotificationMode(enabled);
-    
-    try {
-      await setDevelopmentMode(enabled);
-      
-      Alert.alert(
-        'Test Mode Updated',
-        enabled 
-          ? 'Extension reminders will now be scheduled for 2 minutes instead of days. Perfect for testing!'
-          : 'Extension reminders will now use normal intervals (7/28/90 days).',
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Failed to update test mode:', error);
-      Alert.alert('Error', 'Failed to update test mode setting.');
-      // Revert UI state on error
-      setTestNotificationMode(!enabled);
-    }
-  };
-
   const handleDeleteProfile = () => {
     Alert.alert(
       'Delete Profile',
@@ -697,28 +328,6 @@ ${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
             </View>
           </Card>
 
-          {__DEV__ && (
-            <Card style={styles.settingCard}>
-              <View style={styles.settingRow}>
-                <View style={styles.settingLeft}>
-                  <Ionicons name="flask-outline" size={24} color={Colors.primary} />
-                  <View style={styles.notificationInfo}>
-                    <Text style={styles.settingText}>Test Mode (Dev Only)</Text>
-                    <Text style={styles.notificationSubtext}>
-                      Extension reminders in 2 minutes instead of days
-                    </Text>
-                  </View>
-                </View>
-                <Switch
-                  value={testNotificationMode}
-                  onValueChange={handleTestModeToggle}
-                  trackColor={{ false: Colors.border, true: Colors.primary + '40' }}
-                  thumbColor={testNotificationMode ? Colors.primary : Colors.textLight}
-                />
-              </View>
-            </Card>
-          )}
-
           {!notificationEnabled && (
             <Button
               title="Enable Notifications"
@@ -729,85 +338,14 @@ ${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
           )}
 
           {notificationEnabled && (
-            <>
             <Button
-              title="🔔 Test Notification (5s)"
-              onPress={handleTestNotification}
-              loading={isTestingNotification}
-              variant="outline"
-              style={styles.testButton}
-            />
-
-            {__DEV__ && (
-              <>
-                <Button
-                  title="🧪 Test NotificationService"
-                  onPress={handleTestNotificationService}
-                  loading={isTestingNotification}
-                  variant="outline"
-                  style={[styles.testButton, { marginTop: 8 }]}
-                />
-                
-                <Button
-                  title="⏰ Test Extension Reminder (10s)"
-                  onPress={handleTestExtensionReminder}
-                  variant="outline"
-                  style={[styles.testButton, { marginTop: 8 }]}
-                />
-                
-                <Button
-                  title="🔍 Debug Notifications"
-                  onPress={handleDebugNotifications}
-                  variant="outline"
-                  style={[styles.testButton, { marginTop: 8 }]}
-                />
-
-                <Button
-                  title="ℹ️ Notification Info"
-                  onPress={handleNotificationInfo}
-                  variant="outline"
-                  style={[styles.testButton, { marginTop: 8 }]}
-                />
-
-                <Button
-                  title="📋 Test Extension Modal"
-                  onPress={handleTestExtensionModal}
-                  variant="outline"
-                  style={[styles.testButton, { marginTop: 8 }]}
-                />
-
-                <Button
-                  title="🔍 Debug Extension Modals"
-                  onPress={handleDebugExtensionModals}
-                  variant="outline"
-                  style={[styles.testButton, { marginTop: 8 }]}
-                />
-
-                <Button
-                  title="✅ Check Extension Modals"
-                  onPress={handleForceCheckExtensionModals}
-                  variant="outline"
-                  style={[styles.testButton, { marginTop: 8 }]}
-                />
-
-                <Button
-                  title="🐾 Test with Pet Selection"
-                  onPress={handleTestWithPetSelection}
-                  variant="outline"
-                  style={[styles.testButton, { marginTop: 8 }]}
-                />
-              </>
-            )}
-
-            <Button
-                title="🚫 Disable All Notifications"
-                onPress={handleDisableAllNotifications}
-                loading={isLoading}
+              title="🚫 Disable All Notifications"
+              onPress={handleDisableAllNotifications}
+              loading={isLoading}
               variant="outline" 
-                style={[styles.disableButton, { marginTop: 8 }]}
-                textStyle={styles.disableButtonText}
+              style={styles.disableButton}
+              textStyle={styles.disableButtonText}
             />
-            </>
           )}
         </View>
 
@@ -838,7 +376,7 @@ ${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
                 <Text style={[styles.settingText, { color: Colors.error }]}>Delete Profile</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
-        </View>
+            </View>
           </Card>
         </View>
 
@@ -858,9 +396,9 @@ ${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
         <View style={styles.appInfo}>
           <Text style={styles.appTitle}>Vetly AI</Text>
           <Text style={styles.appVersion}>Version 1.0.0</Text>
-                      <Text style={styles.appDescription}>
-              AI-powered veterinary assistant for pet health and activity tracking
-            </Text>
+          <Text style={styles.appDescription}>
+            AI-powered veterinary assistant for pet health and activity tracking
+          </Text>
         </View>
 
         {/* Password Change Modal */}
@@ -883,7 +421,7 @@ ${Object.keys(queue).length === 0 ? '📋 No extension modals in queue' : ''}
                 }}
                 textStyle={styles.cancelButtonText}
               />
-      </View>
+            </View>
 
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
               <Input
@@ -940,9 +478,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 24, // Reduced top padding to bring user data closer to top
+    paddingTop: 24,
     paddingHorizontal: 24,
-    paddingBottom: 100, // Bottom padding for tab navigation
+    paddingBottom: 100,
   },
   userCard: {
     marginBottom: 32,
@@ -1048,11 +586,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderColor: Colors.primary,
   },
-  testButton: {
-    marginTop: 12,
-    borderColor: Colors.success,
-  },
   disableButton: {
+    marginTop: 12,
     borderColor: Colors.error,
   },
   disableButtonText: {

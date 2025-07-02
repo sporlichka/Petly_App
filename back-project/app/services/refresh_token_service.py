@@ -10,9 +10,9 @@ def create_user_refresh_token(db: Session, user_id: int, device_id: Optional[str
     token = create_refresh_token()
     token_hash = hash_refresh_token(token)
     
-    # Revoke existing tokens for this user (optional - for single device login)
-    # Comment out the next line if you want to allow multiple active sessions
-    revoke_user_refresh_tokens(db, user_id)
+    # Don't revoke existing tokens - allow multiple sessions
+    # This allows refresh tokens to work properly across app restarts and multiple devices
+    # If you need single-device login, enable token rotation in auth.py instead
     
     # Create new refresh token record
     db_refresh_token = RefreshToken(

@@ -68,13 +68,12 @@ def refresh_token(
     # Create new access token
     new_access_token = create_access_token({"sub": user.username})
     
-    # Optionally rotate refresh token (recommended for high security)
-    new_refresh_token = None
-    # Uncomment the following lines to enable refresh token rotation:
-    # refresh_token_service.revoke_refresh_token(db, request.refresh_token)
-    # new_refresh_token = refresh_token_service.create_user_refresh_token(
-    #     db, user.id, device_id=request.device_id
-    # )
+    # Enable refresh token rotation for better security
+    # Revoke the old refresh token and create a new one
+    refresh_token_service.revoke_refresh_token(db, request.refresh_token)
+    new_refresh_token = refresh_token_service.create_user_refresh_token(
+        db, user.id, device_id=token_record.device_id
+    )
     
     return RefreshTokenResponse(
         access_token=new_access_token,
@@ -115,6 +114,12 @@ def login_oauth2(form_data: OAuth2PasswordRequestForm = Depends(), db: Session =
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token({"sub": user.username})
     return {"access_token": token, "token_type": "bearer"}
+
+@router.post("/cleanup-tokens")
+def cleanup_expired_tokens(db: Session = Depends(get_db)):
+    """Clean up expired refresh tokens (admin endpoint)"""
+    deleted_count = refresh_token_service.cleanup_expired_tokens(db)
+    return {"message": f"Cleaned up {deleted_count} expired tokens"}
 
 @router.delete("/delete-profile")
 def delete_profile(

@@ -107,19 +107,6 @@ export class ActivityExtensionService {
           
           if (extensionReminderId) {
             result.extensionReminderId = extensionReminderId;
-            
-            // Планируем модальное окно на следующий период
-            const nextModalDate = this.calculateNextModalDate(lastActivity.date, data.originalRepeat);
-            await extensionModalService.scheduleExtensionModal({
-              activityId: data.activityId,
-              activityTitle: data.activityTitle,
-              originalRepeat: data.originalRepeat,
-              petId: data.petId,
-              category: data.category,
-              scheduledDate: nextModalDate.toISOString(),
-              createdAt: new Date().toISOString(),
-            });
-            
             console.log(`📲 Scheduled next extension reminder and modal`);
           }
         } catch (error) {
@@ -263,26 +250,7 @@ export class ActivityExtensionService {
     }
   }
 
-  /**
-   * Вычисляет дату для следующего модального окна
-   */
-  private calculateNextModalDate(lastActivityDate: string, repeat: 'daily' | 'weekly' | 'monthly'): Date {
-    const date = new Date(lastActivityDate);
-    
-    switch (repeat) {
-      case 'daily':
-        date.setDate(date.getDate() + 7); // Через 7 дней после последней активности
-        break;
-      case 'weekly':
-        date.setDate(date.getDate() + 28); // Через 4 недели
-        break;
-      case 'monthly':
-        date.setMonth(date.getMonth() + 3); // Через 3 месяца
-        break;
-    }
 
-    return date;
-  }
 }
 
 // Export singleton instance

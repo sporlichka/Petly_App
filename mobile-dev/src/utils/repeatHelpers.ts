@@ -1,9 +1,6 @@
 import * as Notifications from 'expo-notifications';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityRecordCreate, ActivityRecord } from '../types';
 import { extensionModalService } from '../services/extensionModalService';
-
-const DEV_MODE_STORAGE_KEY = 'repeat_test_mode';
 
 /**
  * Генерирует список дат для повторяющихся активностей
@@ -57,51 +54,6 @@ export function createRepeatActivity(
   };
 }
 
-// Режим разработки для быстрого тестирования уведомлений
-let DEVELOPMENT_MODE = __DEV__;
-const TEST_REMINDER_MINUTES = 2; // Напоминание через 2 минуты в режиме разработки
-
-/**
- * Устанавливает режим разработки для уведомлений
- */
-export async function setDevelopmentMode(enabled: boolean): Promise<void> {
-  DEVELOPMENT_MODE = enabled;
-  try {
-    await AsyncStorage.setItem(DEV_MODE_STORAGE_KEY, enabled.toString());
-    console.log(`🔧 Development mode for notifications: ${enabled ? 'enabled' : 'disabled'} (saved to storage)`);
-  } catch (error) {
-    console.error('Failed to save development mode to storage:', error);
-  }
-}
-
-/**
- * Получает текущий режим разработки
- */
-export function getDevelopmentMode(): boolean {
-  return DEVELOPMENT_MODE;
-}
-
-/**
- * Загружает режим разработки из хранилища
- */
-export async function loadDevelopmentMode(): Promise<boolean> {
-  try {
-    const stored = await AsyncStorage.getItem(DEV_MODE_STORAGE_KEY);
-    if (stored !== null) {
-      const enabled = stored === 'true';
-      DEVELOPMENT_MODE = enabled;
-      console.log(`🔧 Loaded development mode from storage: ${enabled}`);
-      return enabled;
-    }
-  } catch (error) {
-    console.error('Failed to load development mode from storage:', error);
-  }
-  
-  // По умолчанию используем __DEV__
-  DEVELOPMENT_MODE = __DEV__;
-  return __DEV__;
-}
-
 /**
  * Вычисляет количество дней для напоминания о продлении
  */
@@ -126,32 +78,26 @@ export async function scheduleExtensionReminder(
   repeat: 'daily' | 'weekly' | 'monthly'
 ): Promise<string | null> {
   try {
-    // Проверяем текущий режим разработки
-    const currentDevMode = getDevelopmentMode();
-    console.log(`🔧 Current development mode: ${currentDevMode}`);
-    console.log(`🔧 __DEV__: ${__DEV__}`);
-    console.log(`🔧 DEVELOPMENT_MODE variable: ${DEVELOPMENT_MODE}`);
+    console.log(`📅 Scheduling extension reminder for activity ${activity.id} (${repeat})`);
     
-    // Вычисляем дату напоминания
-    const reminderDate = new Date();
+    // Вычисляем дату последней активности в серии повторений
+    const activityDate = new Date(activity.date);
+    const lastActivityDate = new Date(activityDate);
     
-    if (currentDevMode && __DEV__) {
-      // В режиме разработки добавляем минуты для быстрого тестирования
-      reminderDate.setMinutes(reminderDate.getMinutes() + TEST_REMINDER_MINUTES);
-      console.log(`🔧 Development mode: scheduling reminder in ${TEST_REMINDER_MINUTES} minutes`);
-    } else {
-      // В продакшене добавляем дни
-      const reminderDays = getExtensionReminderDays(repeat);
-      reminderDate.setDate(reminderDate.getDate() + reminderDays);
-      reminderDate.setHours(10, 0, 0, 0); // Устанавливаем время на 10:00 утра
-      console.log(`📅 Production mode: scheduling reminder in ${reminderDays} days`);
-    }
+    // Добавляем соответствующий период к дате активности
+    const reminderDays = getExtensionReminderDays(repeat);
+    lastActivityDate.setDate(lastActivityDate.getDate() + reminderDays);
     
-    console.log(`📅 Scheduling extension reminder for activity ${activity.id}:`);
-    console.log(`  - Current time: ${new Date().toLocaleString()}`);
-    console.log(`  - Reminder date: ${reminderDate.toLocaleString()}`);
-    console.log(`  - Mode: ${(currentDevMode && __DEV__) ? 'Development' : 'Production'}`);
-    console.log(`  - Time difference: ${(reminderDate.getTime() - new Date().getTime()) / 1000 / 60} minutes`);
+    // Напоминание планируется на СЛЕДУЮЩИЙ день после завершения серии
+    const reminderDate = new Date(lastActivityDate);
+    reminderDate.setDate(reminderDate.getDate() + 1);
+    reminderDate.setHours(10, 0, 0, 0); // Устанавливаем время на 10:00 утра
+    
+    console.log(`📅 Extension reminder calculation:`);
+    console.log(`  - Activity date: ${activityDate.toLocaleDateString()}`);
+    console.log(`  - Last activity in series: ${lastActivityDate.toLocaleDateString()}`);
+    console.log(`  - Reminder scheduled for: ${reminderDate.toLocaleString()}`);
+    console.log(`  - Days in series: ${reminderDays}`);
 
     // Проверяем, что дата в будущем
     if (reminderDate <= new Date()) {

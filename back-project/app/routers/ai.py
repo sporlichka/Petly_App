@@ -45,11 +45,18 @@ async def assist(
         data_api = AIAgentDataAPI(db)
         pets = data_api.get_user_pets(current_user.id)
 
-        # 2. Build a pet summary string
+        # 2. Build a pet summary string with weight information
         if pets:
-            pet_summary = "User's pets:\n" + "\n".join(
-                f"- {pet.name} ({pet.gender} {pet.species}, {pet.breed}, age {pet.age}): {pet.notes}" for pet in pets
-            ) + "\n\n"
+            pet_details = []
+            for pet in pets:
+                breed_str = f", {pet.breed}" if pet.breed else ""
+                notes_str = f": {pet.notes}" if pet.notes else ""
+                weight_str = f", {pet.weight}kg" if pet.weight else ""
+                
+                pet_info = f"- {pet.name} ({pet.gender} {pet.species}{breed_str}, age {pet.age}{weight_str}){notes_str}"
+                pet_details.append(pet_info)
+            
+            pet_summary = "User's pets:\n" + "\n".join(pet_details) + "\n\n"
         else:
             pet_summary = "User has no pets registered.\n\n"
 
@@ -142,6 +149,7 @@ async def list_ai_session_messages(session_id: str, current_user: User = Depends
             if content_text and author == 'user':
                 # Remove the pet summary prefix that was added for AI context
                 # Pattern to match "User's pets:\n- ... \n\n" at the beginning
+                # Updated to handle weight and improved formatting
                 pet_pattern = r"^User's pets:\n.*?\n\n"
                 content_text = re.sub(pet_pattern, '', content_text, flags=re.DOTALL)
                 
