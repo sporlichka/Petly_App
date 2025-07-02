@@ -20,7 +20,7 @@ import {
 } from '../types';
 import { tokenStorage } from './tokenStorage';
 
-const API_BASE_URL = 'https://tabvetly.live'; // Your backend IP address
+const API_BASE_URL = 'https://tabvetly.live';
 
 class ApiService {
   private isRefreshing = false;
