@@ -4,6 +4,8 @@ import {
   UserCreate,
   UserLogin,
   AuthResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
   Pet,
   PetCreate,
   PetUpdate,
@@ -16,12 +18,16 @@ import {
   ChatMessage,
   ApiError
 } from '../types';
+import { tokenStorage } from './tokenStorage';
 
 const API_BASE_URL = 'https://tabvetly.live'; // Your backend IP address
 
 class ApiService {
+  private isRefreshing = false;
+  private refreshPromise: Promise<string> | null = null;
+
   private async getAuthHeaders(): Promise<Record<string, string>> {
-    const token = await AsyncStorage.getItem('access_token');
+    const token = await tokenStorage.getAccessToken();
     return {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
@@ -29,20 +35,78 @@ class ApiService {
   }
 
   private async handleUnauthorized(): Promise<void> {
-    // Clear expired token and user data
-    await AsyncStorage.removeItem('access_token');
-    await AsyncStorage.removeItem('user');
-    console.log('🔑 Token expired - cleared from storage');
+    // Clear all auth data when unauthorized
+    await tokenStorage.clearAll();
+    console.log('🔑 Unauthorized - cleared all auth data');
+  }
+
+  private async refreshAccessToken(): Promise<string> {
+    // Prevent multiple simultaneous refresh attempts
+    if (this.isRefreshing && this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.isRefreshing = true;
+    
+    this.refreshPromise = (async () => {
+      try {
+        const refreshToken = await tokenStorage.getRefreshToken();
+        
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
+
+        console.log('🔄 Refreshing access token...');
+
+        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            refresh_token: refreshToken
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Refresh failed: ${response.status}`);
+        }
+
+        const data: RefreshTokenResponse = await response.json();
+        
+        // Store new access token
+        await tokenStorage.setAccessToken(data.access_token);
+        
+        // Store new refresh token if provided (token rotation)
+        if (data.refresh_token) {
+          await tokenStorage.setRefreshToken(data.refresh_token);
+        }
+
+        console.log('✅ Token refreshed successfully');
+        return data.access_token;
+
+      } catch (error) {
+        console.error('❌ Token refresh failed:', error);
+        await this.handleUnauthorized();
+        throw new Error('Session expired. Please log in again.');
+      } finally {
+        this.isRefreshing = false;
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
   }
 
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const headers = await this.getAuthHeaders();
+    // First attempt with current token
+    let headers = await this.getAuthHeaders();
     
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      let response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers: {
           ...headers,
@@ -50,10 +114,38 @@ class ApiService {
         },
       });
 
+      // If 401 and we have a refresh token, try to refresh
       if (response.status === 401) {
-        // Handle token expiration
-        await this.handleUnauthorized();
-        throw new Error('Authentication expired. Please log in again.');
+        const refreshToken = await tokenStorage.getRefreshToken();
+        
+        if (refreshToken && !this.isRefreshing) {
+          try {
+            console.log('🔄 Access token expired, attempting refresh...');
+            
+            // Refresh the token
+            await this.refreshAccessToken();
+            
+            // Retry the original request with new token
+            headers = await this.getAuthHeaders();
+            response = await fetch(`${API_BASE_URL}${endpoint}`, {
+              ...options,
+              headers: {
+                ...headers,
+                ...options.headers,
+              },
+            });
+
+            console.log('✅ Request retried with new token');
+            
+          } catch (refreshError) {
+            console.error('❌ Token refresh failed, logging out');
+            throw new Error('Session expired. Please log in again.');
+          }
+        } else {
+          // No refresh token or already refreshing, handle as unauthorized
+          await this.handleUnauthorized();
+          throw new Error('Authentication expired. Please log in again.');
+        }
       }
       // Check if response is ok
       if (!response.ok) {
@@ -106,10 +198,12 @@ class ApiService {
       body: JSON.stringify(credentials),
     });
     
-    // Store token for future requests
-    await AsyncStorage.setItem('access_token', response.access_token);
-    await AsyncStorage.setItem('user', JSON.stringify(response.user));
-    console.log('🔑 New token stored successfully');
+    // Store both tokens securely
+    await tokenStorage.setAccessToken(response.access_token);
+    await tokenStorage.setRefreshToken(response.refresh_token);
+    await tokenStorage.setUser(response.user);
+    
+    console.log('🔑 Login successful - tokens stored securely');
     
     return response;
   }
@@ -126,9 +220,22 @@ class ApiService {
   }
 
   async logout(): Promise<void> {
-    await AsyncStorage.removeItem('access_token');
-    await AsyncStorage.removeItem('user');
-    console.log('🔑 Logged out - tokens cleared');
+    try {
+      // Try to revoke the refresh token on the server
+      const refreshToken = await tokenStorage.getRefreshToken();
+      if (refreshToken) {
+        await this.request('/auth/logout', {
+          method: 'POST',
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+      }
+    } catch (error) {
+      console.log('⚠️ Failed to revoke token on server, clearing locally');
+    }
+    
+    // Clear all local auth data
+    await tokenStorage.clearAll();
+    console.log('🔑 Logged out - all tokens cleared');
   }
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
@@ -146,8 +253,7 @@ class ApiService {
       method: 'DELETE',
     });
     // Clear stored data after successful deletion
-    await AsyncStorage.removeItem('access_token');
-    await AsyncStorage.removeItem('user');
+    await tokenStorage.clearAll();
     console.log('🗑️ Profile deleted - all data cleared');
   }
 
@@ -340,16 +446,28 @@ class ApiService {
   }
 
   async isAuthenticated(): Promise<boolean> {
-    const token = await AsyncStorage.getItem('access_token');
-    if (!token) {
+    // Check if we have any tokens at all
+    if (!(await tokenStorage.hasValidTokens())) {
       return false;
     }
 
-    // First check if token is expired without making API call
-    if (this.isTokenExpired(token)) {
-      console.log('🔑 Token is expired, clearing...');
-      await this.handleUnauthorized();
+    const accessToken = await tokenStorage.getAccessToken();
+    if (!accessToken) {
       return false;
+    }
+
+    // Check if access token is expired
+    if (this.isTokenExpired(accessToken)) {
+      console.log('🔑 Access token expired, trying refresh...');
+      
+      // Try to refresh the token
+      try {
+        await this.refreshAccessToken();
+        return true;
+      } catch (error) {
+        console.log('🔑 Token refresh failed during auth check');
+        return false;
+      }
     }
 
     // Token appears valid, but let's verify with a quick API call
@@ -358,15 +476,12 @@ class ApiService {
       return true;
     } catch (error) {
       console.log('🔑 Token validation failed:', error);
-      // Token is invalid or expired, clear it
-      await this.handleUnauthorized();
       return false;
     }
   }
 
   async getStoredUser(): Promise<User | null> {
-    const userString = await AsyncStorage.getItem('user');
-    return userString ? JSON.parse(userString) : null;
+    return await tokenStorage.getUser();
   }
 }
 

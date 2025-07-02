@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -201,7 +202,12 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-        <View style={styles.content}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
             <View style={[styles.categoryIcon, { backgroundColor: categoryInfo.color + '20' }]}>
@@ -304,6 +310,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
             title="Select Activity Time"
           />
         </View>
+        </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -316,14 +323,22 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: '5%',
+  },
   content: {
     flex: 1,
-    padding: 24,
+    padding: '6%',
+    minHeight: '100%',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 20,
+    marginBottom: '8%',
+    marginTop: '3%',
   },
   categoryIcon: {
     width: 80,
@@ -350,7 +365,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   presetsCard: {
-    marginBottom: 16,
+    marginBottom: '4%',
   },
   sectionTitle: {
     fontSize: 18,
@@ -361,7 +376,6 @@ const styles = StyleSheet.create({
   presetsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
   },
   presetButton: {
     flexDirection: 'row',
@@ -371,16 +385,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: Colors.primaryLight,
     borderRadius: 10,
-    gap: 6,
+    marginRight: '2%',
+    marginBottom: '2%',
     minWidth: '30%',
   },
   presetText: {
     fontSize: 14,
     fontWeight: '500',
     color: Colors.primary,
+    marginLeft: 6,
   },
   selectionCard: {
-    marginBottom: 32,
+    marginBottom: '8%',
   },
   selectionRow: {
     flexDirection: 'row',
@@ -413,7 +429,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   continueButton: {
-    marginBottom: 24,
+    marginBottom: '6%',
   },
   progressContainer: {
     alignItems: 'center',

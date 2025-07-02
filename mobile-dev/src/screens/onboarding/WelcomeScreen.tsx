@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -29,7 +30,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-        <View style={styles.content}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
           {/* Illustration Section */}
           <View style={styles.illustrationContainer}>
             <Text style={styles.mainEmoji}>🐕‍🦺</Text>
@@ -77,6 +83,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             </Text>
           </View>
         </View>
+        </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -89,10 +96,17 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   content: {
     flex: 1,
     padding: 24,
     justifyContent: 'space-between',
+    minHeight: '100%',
   },
   illustrationContainer: {
     alignItems: 'center',

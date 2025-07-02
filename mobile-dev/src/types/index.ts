@@ -19,8 +19,20 @@ export interface UserLogin {
 
 export interface AuthResponse {
   access_token: string;
+  refresh_token: string;
   token_type: string;
   user: User;
+}
+
+export interface RefreshTokenRequest {
+  refresh_token: string;
+  device_id?: string;
+}
+
+export interface RefreshTokenResponse {
+  access_token: string;
+  refresh_token?: string; // Optional for token rotation
+  token_type: string;
 }
 
 // Pet types

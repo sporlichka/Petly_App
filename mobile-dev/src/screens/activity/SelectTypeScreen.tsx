@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -130,7 +131,12 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-        <View style={styles.content}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>What type of activity?</Text>
             <Text style={styles.subtitle}>
@@ -172,6 +178,7 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
             </View>
           </View>
         </View>
+        </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -184,14 +191,22 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: '5%',
+  },
   content: {
     flex: 1,
-    padding: 24,
+    padding: '6%',
+    minHeight: '100%',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
-    marginTop: 20,
+    marginBottom: '10%',
+    marginTop: '3%',
   },
   title: {
     fontSize: 24,
@@ -208,12 +223,12 @@ const styles = StyleSheet.create({
   },
   typesContainer: {
     flex: 1,
-    gap: 16,
   },
   typeCard: {
     backgroundColor: Colors.surface,
     borderRadius: 16,
     borderWidth: 2,
+    marginBottom: '4%',
     shadowColor: Colors.shadow,
     shadowOffset: {
       width: 0,
@@ -263,7 +278,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: '5%',
   },
   progressText: {
     fontSize: 14,

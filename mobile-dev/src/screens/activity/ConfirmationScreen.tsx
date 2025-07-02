@@ -426,12 +426,13 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    padding: 24,
+    padding: '6%',
+    paddingBottom: '5%',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 20,
+    marginBottom: '8%',
+    marginTop: '3%',
   },
   categoryIcon: {
     width: 80,
@@ -458,13 +459,13 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   summaryCard: {
-    marginBottom: 16,
+    marginBottom: '4%',
   },
   detailsCard: {
-    marginBottom: 16,
+    marginBottom: '4%',
   },
   notesCard: {
-    marginBottom: 24,
+    marginBottom: '6%',
   },
   sectionTitle: {
     fontSize: 18,
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   saveButton: {
-    marginBottom: 24,
+    marginBottom: '6%',
   },
   progressContainer: {
     alignItems: 'center',

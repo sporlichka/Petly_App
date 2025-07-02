@@ -297,12 +297,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: '5%',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 10,
+    marginBottom: '5%',
+    marginTop: '2%',
   },
   categoryIcon: {
     width: 60,
@@ -333,9 +333,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: '3%',
   },
   optionsCard: {
-    marginBottom: 12,
+    marginBottom: '3%',
   },
   sectionTitle: {
     fontSize: 16,
@@ -396,7 +397,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   notificationCard: {
-    marginBottom: 12,
+    marginBottom: '3%',
   },
   notificationRow: {
     flexDirection: 'row',
@@ -424,7 +425,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   summaryCard: {
-    marginBottom: 12,
+    marginBottom: '3%',
   },
   summaryHeader: {
     flexDirection: 'row',
@@ -448,7 +449,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.info + '10',
     padding: 12,
     borderRadius: 10,
-    marginBottom: 12,
+    marginBottom: '3%',
   },
   infoText: {
     fontSize: 12,
@@ -458,14 +459,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bottomSection: {
-    paddingTop: 12,
+    paddingTop: '3%',
   },
   continueButton: {
-    marginBottom: 16,
+    marginBottom: '4%',
   },
   progressContainer: {
     alignItems: 'center',
-    paddingBottom: 8,
+    paddingBottom: '2%',
   },
   progressText: {
     fontSize: 12,
