@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.schemas.user import UserCreate, UserLogin, UserRead
+from app.schemas.user import UserCreate, UserLogin, UserRead, AuthResponse, RefreshTokenRequest, RefreshTokenResponse
 from app.services import user_service
+from app.services import refresh_token_service
 from app.auth.jwt import create_access_token
 from app.auth.deps import get_db, get_current_user
 from app.models.user import User
@@ -17,22 +18,87 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     user = user_service.create_user(db, user_in)
     return user
 
-@router.post("/login")
+@router.post("/login", response_model=AuthResponse)
 def login(user_in: UserLogin, db: Session = Depends(get_db)):
     user = user_service.authenticate_user(db, user_in.email, user_in.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = create_access_token({"sub": user.username})
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "created_at": user.created_at
-        }
-    }
+    
+    # Create access token
+    access_token = create_access_token({"sub": user.username})
+    
+    # Create refresh token
+    refresh_token = refresh_token_service.create_user_refresh_token(
+        db, user.id, device_id=None  # You can add device_id from request if needed
+    )
+    
+    return AuthResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserRead(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            created_at=user.created_at
+        )
+    )
+
+@router.post("/refresh", response_model=RefreshTokenResponse)
+def refresh_token(
+    request: RefreshTokenRequest,
+    db: Session = Depends(get_db)
+):
+    """Exchange refresh token for new access token"""
+    # Validate refresh token
+    token_record = refresh_token_service.validate_refresh_token(db, request.refresh_token)
+    if not token_record:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
+    
+    # Get user
+    user = user_service.get_user_by_id(db, token_record.user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+    
+    # Create new access token
+    new_access_token = create_access_token({"sub": user.username})
+    
+    # Optionally rotate refresh token (recommended for high security)
+    new_refresh_token = None
+    # Uncomment the following lines to enable refresh token rotation:
+    # refresh_token_service.revoke_refresh_token(db, request.refresh_token)
+    # new_refresh_token = refresh_token_service.create_user_refresh_token(
+    #     db, user.id, device_id=request.device_id
+    # )
+    
+    return RefreshTokenResponse(
+        access_token=new_access_token,
+        refresh_token=new_refresh_token
+    )
+
+@router.post("/logout")
+def logout(
+    request: RefreshTokenRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Logout and revoke refresh token"""
+    refresh_token_service.revoke_refresh_token(db, request.refresh_token)
+    return {"message": "Logged out successfully"}
+
+@router.post("/logout-all")
+def logout_all(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Logout from all devices - revoke all refresh tokens"""
+    count = refresh_token_service.revoke_user_refresh_tokens(db, current_user.id)
+    return {"message": f"Logged out from {count} devices"}
 
 @router.get("/me", response_model=UserRead)
 def get_current_user_info(current_user: User = Depends(get_current_user)):
@@ -60,6 +126,9 @@ def delete_profile(
     This action is irreversible and will permanently delete all user data.
     """
     try:
+        # Revoke all refresh tokens before deleting profile
+        refresh_token_service.revoke_user_refresh_tokens(db, current_user.id)
+        
         success = user_service.delete_user_profile(db, current_user.id)
         if not success:
             raise HTTPException(

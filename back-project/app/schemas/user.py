@@ -18,4 +18,19 @@ class UserRead(UserBase):
     created_at: datetime
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+class AuthResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: UserRead
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+    device_id: Optional[str] = None
+
+class RefreshTokenResponse(BaseModel):
+    access_token: str
+    refresh_token: Optional[str] = None  # New refresh token (optional rotation)
+    token_type: str = "bearer" 
