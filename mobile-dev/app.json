@@ -7,7 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/vetly-logo.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/vetly-logo.png",
       "resizeMode": "contain",
@@ -19,14 +18,12 @@
         "UIBackgroundModes": [
           "fetch",
           "remote-notification",
-          "background-processing",
-          "fetch",
-          "remote-notification",
           "background-processing"
         ],
         "NSUserNotificationsUsageDescription": "Vetly AI needs notifications to remind you about your pet's activities and health checks.",
         "NSCameraUsageDescription": "Vetly AI needs camera access to take photos of your pets.",
-        "NSPhotoLibraryUsageDescription": "Vetly AI needs photo library access to select pet photos."
+        "NSPhotoLibraryUsageDescription": "Vetly AI needs photo library access to select pet photos.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.tabchny.vetlyai"
     },
