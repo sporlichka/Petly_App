@@ -5,7 +5,7 @@ from app.models.refresh_token import RefreshToken
 from app.auth.jwt import create_refresh_token, hash_refresh_token, get_refresh_token_expiry, verify_refresh_token_hash
 
 def create_user_refresh_token(db: Session, user_id: int, device_id: Optional[str] = None) -> str:
-    """Create a new refresh token for a user"""
+    """Create a new refresh token for a user."""
     # Generate new refresh token
     token = create_refresh_token()
     token_hash = hash_refresh_token(token)
@@ -29,7 +29,7 @@ def create_user_refresh_token(db: Session, user_id: int, device_id: Optional[str
     return token
 
 def validate_refresh_token(db: Session, token: str) -> Optional[RefreshToken]:
-    """Validate a refresh token and return the token record if valid"""
+    """Validate a refresh token and return the token record if valid."""
     token_hash = hash_refresh_token(token)
     
     # Find the token in database
@@ -49,7 +49,7 @@ def validate_refresh_token(db: Session, token: str) -> Optional[RefreshToken]:
     return db_token
 
 def revoke_refresh_token(db: Session, token: str) -> bool:
-    """Revoke a specific refresh token"""
+    """Revoke a specific refresh token."""
     token_hash = hash_refresh_token(token)
     
     db_token = db.query(RefreshToken).filter(
@@ -64,7 +64,7 @@ def revoke_refresh_token(db: Session, token: str) -> bool:
     return False
 
 def revoke_user_refresh_tokens(db: Session, user_id: int) -> int:
-    """Revoke all refresh tokens for a user"""
+    """Revoke all refresh tokens for a user."""
     updated_count = db.query(RefreshToken).filter(
         RefreshToken.user_id == user_id,
         RefreshToken.is_valid == True
@@ -74,7 +74,7 @@ def revoke_user_refresh_tokens(db: Session, user_id: int) -> int:
     return updated_count
 
 def cleanup_expired_tokens(db: Session) -> int:
-    """Remove expired refresh tokens from database"""
+    """Remove expired refresh tokens from database."""
     deleted_count = db.query(RefreshToken).filter(
         RefreshToken.expires_at < datetime.utcnow()
     ).delete()
@@ -83,7 +83,7 @@ def cleanup_expired_tokens(db: Session) -> int:
     return deleted_count
 
 def get_user_active_tokens_count(db: Session, user_id: int) -> int:
-    """Get count of active refresh tokens for a user"""
+    """Get count of active refresh tokens for a user."""
     return db.query(RefreshToken).filter(
         RefreshToken.user_id == user_id,
         RefreshToken.is_valid == True,

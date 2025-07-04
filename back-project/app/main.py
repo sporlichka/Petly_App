@@ -13,13 +13,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import and include routers (to be implemented)
-# from .routers import auth, pets, feeding, health, weight, activity, chat, settings
+# Register all routers (including auth with /auth/refresh)
 app.include_router(auth.router)
 app.include_router(pets.router)
 app.include_router(ai.router)
 app.include_router(activity_records.router)
-# ...
 
 @app.get("/")
 def root():
