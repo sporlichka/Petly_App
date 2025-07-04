@@ -1,9 +1,13 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import * as TaskManager from 'expo-task-manager';
+import * as BackgroundFetch from 'expo-background-fetch';
+import { Platform, AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import dayjs from 'dayjs';
 import { ActivityRecord } from '../types';
 
-// Configure notification behavior only for local notifications
+// Configure notification behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -14,10 +18,24 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// Storage keys
+const NOTIFICATION_IDS_STORAGE_KEY = 'activity_notification_ids';
+const BACKGROUND_TASK_NAME = 'vetly-background-task';
+
+export interface NotificationIdMapping {
+  [activityId: string]: {
+    notificationId: string;
+    scheduledDate: string;
+    petName?: string;
+  };
+}
+
 export class NotificationService {
   private static instance: NotificationService;
   private isInitialized = false;
   private initializationFailed = false;
+  private notificationIds: NotificationIdMapping = {} as NotificationIdMapping;
+  private appStateListener: any = null;
 
   public static getInstance(): NotificationService {
     if (!NotificationService.instance) {
@@ -36,49 +54,75 @@ export class NotificationService {
     }
 
     try {
-      console.log('🔔 Initializing LOCAL notification service...');
+      console.log('🔔 Initializing enhanced notification service...');
       
       // Check if we're in a supported environment
       if (!Device.isDevice) {
-        console.warn('📱 Local notifications require a physical device');
+        console.warn('📱 Notifications require a physical device');
         this.initializationFailed = true;
         return false;
       }
 
-      // Set up notification channel for Android (LOCAL notifications only)
+      // Load stored notification IDs
+      await this.loadNotificationIds();
+
+      // Set up notification channel for Android
       if (Platform.OS === 'android') {
-        try {
-          await Notifications.setNotificationChannelAsync('pet-activities', {
-            name: 'Pet Activity Reminders',
-            description: 'Local notifications for pet feeding, health, and activity reminders',
-            importance: Notifications.AndroidImportance.DEFAULT,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: '#FFD54F',
-            sound: 'default',
-          });
-          console.log('✅ Android notification channel created');
-        } catch (channelError) {
-          console.error('❌ Failed to create notification channel:', channelError);
-          // Continue anyway, might still work
-        }
+        await this.setupAndroidChannels();
       }
 
-      // Request permissions for LOCAL notifications only
+      // Request permissions
       const hasPermission = await this.requestPermissions();
-      this.isInitialized = hasPermission;
-      
-      if (hasPermission) {
-        console.log('✅ Local notification service initialized successfully');
-      } else {
+      if (!hasPermission) {
         console.warn('⚠️ Notification permissions not granted');
         this.initializationFailed = true;
+        return false;
       }
-      
-      return hasPermission;
+
+      // Register background task
+      await this.registerBackgroundTask();
+
+      // Set up AppState listener for missed notifications
+      this.setupAppStateListener();
+
+      this.isInitialized = true;
+      console.log('✅ Enhanced notification service initialized successfully');
+      return true;
+
     } catch (error) {
       console.error('❌ Failed to initialize notification service:', error);
       this.initializationFailed = true;
       return false;
+    }
+  }
+
+  private async setupAndroidChannels(): Promise<void> {
+    try {
+      await Notifications.setNotificationChannelAsync('pet-activities', {
+        name: 'Pet Activity Reminders',
+        description: 'Local notifications for pet feeding, health, and activity reminders',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FFD54F',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: false,
+      });
+
+      await Notifications.setNotificationChannelAsync('extension-reminders', {
+        name: 'Activity Extension Reminders',
+        description: 'Reminders to extend recurring activities',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FFD54F',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: false,
+      });
+
+      console.log('✅ Android notification channels created');
+    } catch (channelError) {
+      console.error('❌ Failed to create notification channels:', channelError);
     }
   }
 
@@ -117,51 +161,89 @@ export class NotificationService {
     }
   }
 
+  private async registerBackgroundTask(): Promise<void> {
+    try {
+      // Define the background task
+      TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
+        try {
+          console.log('🔄 Background task running...');
+          
+          // Check for missed notifications and schedule new ones
+          await this.checkAndScheduleMissedNotifications();
+          
+          // Clean up expired notifications
+          await this.cleanupExpiredNotifications();
+          
+          return BackgroundFetch.BackgroundFetchResult.NewData;
+        } catch (error) {
+          console.error('❌ Background task failed:', error);
+          return BackgroundFetch.BackgroundFetchResult.Failed;
+        }
+      });
+
+      // Register the background task
+      await BackgroundFetch.registerTaskAsync(BACKGROUND_TASK_NAME, {
+        minimumInterval: 3600, // Every hour
+        stopOnTerminate: false,
+        startOnBoot: true,
+      });
+
+      console.log('✅ Background task registered');
+    } catch (error) {
+      console.error('❌ Failed to register background task:', error);
+    }
+  }
+
+  private setupAppStateListener(): void {
+    this.appStateListener = AppState.addEventListener('change', async (nextAppState) => {
+      if (nextAppState === 'active') {
+        console.log('📱 App became active, checking for missed notifications...');
+        await this.checkAndScheduleMissedNotifications();
+      }
+    });
+  }
+
   async scheduleActivityNotification(activity: ActivityRecord, petName?: string): Promise<string | null> {
     try {
-      console.log(`🔔 NotificationService: Starting schedule for activity ${activity.id}`);
+      console.log(`🔔 Scheduling notification for activity ${activity.id}`);
       
       if (!this.isInitialized) {
-        console.log(`🔔 NotificationService: Not initialized, attempting to initialize...`);
         const initialized = await this.initialize();
-        console.log(`🔔 NotificationService: Initialization result: ${initialized}`);
         if (!initialized) {
-          console.log(`❌ NotificationService: Initialization failed, cannot schedule notification`);
+          console.log(`❌ Service not initialized, cannot schedule notification`);
           return null;
         }
       }
 
-      // Don't schedule if notifications are disabled for this activity
+      // Don't schedule if notifications are disabled
       if (!activity.notify) {
-        console.log(`❌ NotificationService: Notifications disabled for activity ${activity.id}, skipping`);
+        console.log(`❌ Notifications disabled for activity ${activity.id}`);
         return null;
       }
 
-      // Parse the date and time properly handling timezone
-      // The activity.date comes as local time string like "2024-12-26T15:30:00"
-      // We need to ensure it's interpreted as local time, not UTC
-      console.log(`🕐 NotificationService: Parsing activity date: ${activity.date}`);
+      // Parse the activity date
       const triggerDate = this.parseActivityDate(activity.date);
       const now = new Date();
 
-      console.log(`🔔 Scheduling notification for activity ${activity.id}:`);
-      console.log(`  - Activity date string: ${activity.date}`);
-      console.log(`  - Parsed trigger date: ${triggerDate.toISOString()}`);
-      console.log(`  - Trigger date local: ${triggerDate.toLocaleString()}`);
-      console.log(`  - Current time: ${now.toISOString()}`);
-      console.log(`  - Current time local: ${now.toLocaleString()}`);
-      console.log(`  - Time until trigger: ${(triggerDate.getTime() - now.getTime()) / 1000 / 60} minutes`);
-      console.log(`  - Pet name: ${petName || 'unknown'}`);
+      console.log(`🔔 Activity details:`, {
+        id: activity.id,
+        date: activity.date,
+        parsedDate: triggerDate.toISOString(),
+        repeat: activity.repeat,
+        notify: activity.notify,
+        petName
+      });
 
       // Don't schedule notifications for past dates
       if (triggerDate <= now) {
         console.log(`❌ Activity date is in the past, skipping notification`);
-        console.log(`  - Trigger: ${triggerDate.getTime()}, Now: ${now.getTime()}`);
         return null;
       }
 
+      // Cancel existing notification for this activity
+      await this.cancelNotificationForActivity(activity.id);
+
       // Create notification content
-      console.log(`📝 NotificationService: Creating notification content...`);
       const notificationContent: Notifications.NotificationContentInput = {
         title: `🐾 ${activity.title}`,
         body: this.createNotificationBody(activity, petName),
@@ -170,79 +252,64 @@ export class NotificationService {
           activityId: activity.id,
           petId: activity.pet_id,
           category: activity.category,
+          type: 'activity-reminder',
         },
       };
-      console.log(`📝 NotificationService: Notification content created:`, notificationContent);
 
-      // Schedule the notification
-      console.log(`⏰ NotificationService: Creating trigger...`);
-      const trigger: Notifications.NotificationTriggerInput = this.createTrigger(activity, triggerDate);
+      // Create trigger based on repeat type
+      const trigger = this.createTrigger(activity, triggerDate);
       
       console.log(`📅 Creating trigger:`, trigger);
       
-      console.log(`📤 NotificationService: Scheduling notification with Expo...`);
+      // Schedule the notification
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: notificationContent,
         trigger,
       });
 
+      // Store the notification ID
+      await this.saveNotificationId(activity.id, notificationId, triggerDate, petName);
+
       console.log(`✅ Scheduled notification ${notificationId} for activity ${activity.id}`);
       return notificationId;
 
     } catch (error) {
-      console.error('❌ NotificationService: Failed to schedule notification:', error);
-      console.error('❌ NotificationService: Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        activityId: activity.id,
-        activityDate: activity.date,
-        notify: activity.notify
-      });
+      console.error('❌ Failed to schedule notification:', error);
       return null;
     }
   }
 
   private parseActivityDate(dateString: string): Date {
-    // The date string comes as "YYYY-MM-DDTHH:mm:ss" without timezone info
-    // We need to parse it as local time to avoid timezone conversion issues
-    
     console.log(`🕐 Parsing activity date: ${dateString}`);
     
     try {
-      // Method 1: Parse components manually to ensure local time interpretation
+      // Parse components manually to ensure local time interpretation
       const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
       if (match) {
         const [_, year, month, day, hour, minute, second] = match;
-        // Date constructor with individual components always creates local time
         const parsedDate = new Date(
           parseInt(year, 10),
-          parseInt(month, 10) - 1, // Month is 0-based
+          parseInt(month, 10) - 1,
           parseInt(day, 10),
           parseInt(hour, 10),
           parseInt(minute, 10),
           parseInt(second, 10)
         );
         
-        // Validate the parsed date
         if (isNaN(parsedDate.getTime())) {
           throw new Error(`Invalid date components from ${dateString}`);
         }
         
         console.log(`✅ Manual parsing result:`, {
           input: dateString,
-          components: { year, month: parseInt(month, 10) - 1, day, hour, minute, second },
           result: parsedDate.toISOString(),
-          local: parsedDate.toLocaleString(),
-          timestamp: parsedDate.getTime()
+          local: parsedDate.toLocaleString()
         });
         
         return parsedDate;
       }
       
-      // Method 2: Try parsing with simpler approach
-      console.log(`⚠️ Date string doesn't match expected format, trying simpler parsing`);
-      
-      // Remove the 'T' and replace with space, then parse
+      // Fallback parsing
       const normalizedDate = dateString.replace('T', ' ');
       const date = new Date(normalizedDate);
       
@@ -252,10 +319,8 @@ export class NotificationService {
       
       console.log(`⚠️ Fallback date parsing successful:`, {
         original: dateString,
-        normalized: normalizedDate,
         parsed: date.toISOString(),
-        local: date.toLocaleString(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        local: date.toLocaleString()
       });
       
       return date;
@@ -274,7 +339,6 @@ export class NotificationService {
     let body = '';
     const pet = petName || 'your pet';
     
-    // Add category-specific emoji and context with pet name
     switch (activity.category) {
       case 'FEEDING':
         body = `🍽️ Time to feed ${pet}`;
@@ -295,7 +359,6 @@ export class NotificationService {
         body = `📝 Reminder for ${pet}`;
     }
 
-    // Add notes if available
     if (activity.notes && activity.notes.trim()) {
       body += `\n\n${activity.notes}`;
     }
@@ -305,24 +368,17 @@ export class NotificationService {
 
   private createTrigger(activity: ActivityRecord, triggerDate: Date): Notifications.NotificationTriggerInput {
     console.log(`🎯 Creating trigger for activity ${activity.id}, repeat: ${activity.repeat}`);
-    console.log(`  - Trigger date: ${triggerDate.toLocaleString()}`);
-    console.log(`  - Hour: ${triggerDate.getHours()}, Minute: ${triggerDate.getMinutes()}`);
-    console.log(`  - Date object valid: ${!isNaN(triggerDate.getTime())}`);
-    console.log(`  - Date timestamp: ${triggerDate.getTime()}`);
     
     // Handle repeat notifications
     if (activity.repeat && activity.repeat !== 'none') {
-      console.log(`🔄 Activity has repeat: ${activity.repeat}`);
       switch (activity.repeat) {
         case 'daily':
-          console.log(`  - Creating DAILY trigger for ${triggerDate.getHours()}:${triggerDate.getMinutes()}`);
           return {
             type: Notifications.SchedulableTriggerInputTypes.DAILY,
             hour: triggerDate.getHours(),
             minute: triggerDate.getMinutes(),
           };
         case 'weekly':
-          console.log(`  - Creating WEEKLY trigger for day ${triggerDate.getDay()} at ${triggerDate.getHours()}:${triggerDate.getMinutes()}`);
           return {
             type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
             weekday: triggerDate.getDay() + 1, // Expo uses 1-7, JS uses 0-6
@@ -330,16 +386,12 @@ export class NotificationService {
             minute: triggerDate.getMinutes(),
           };
         case 'monthly':
-          console.log(`  - Creating MONTHLY (one-time) trigger for ${triggerDate.toISOString()}`);
           // For monthly, we'll use a one-time notification and let the user reschedule
-          // as true monthly recurring notifications are complex with varying month lengths
           return {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
             date: triggerDate,
           };
         default:
-          console.log(`  - Unknown repeat type, using one-time`);
-          // Fallback to one-time notification
           return {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
             date: triggerDate,
@@ -348,67 +400,164 @@ export class NotificationService {
     }
 
     // One-time notification
-    console.log(`📅 Activity has no repeat (${activity.repeat}), creating ONE-TIME trigger`);
-    console.log(`  - Using date trigger type`);
-    console.log(`  - Trigger date: ${triggerDate.toISOString()}`);
-    console.log(`  - Trigger date local: ${triggerDate.toLocaleString()}`);
-    
-    const trigger = {
+    return {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: triggerDate,
     };
-    
-    console.log(`📅 One-time trigger created:`, trigger);
-    return trigger;
   }
 
-  async cancelNotification(notificationId: string): Promise<boolean> {
+  private async loadNotificationIds(): Promise<void> {
     try {
-      await Notifications.cancelScheduledNotificationAsync(notificationId);
-      console.log(`Cancelled notification ${notificationId}`);
-      return true;
+      const stored = await AsyncStorage.getItem(NOTIFICATION_IDS_STORAGE_KEY);
+      if (stored) {
+        this.notificationIds = JSON.parse(stored) as NotificationIdMapping;
+        console.log(`📋 Loaded ${Object.keys(this.notificationIds).length} notification mappings`);
+      }
     } catch (error) {
-      console.error('Failed to cancel notification:', error);
+      console.error('Failed to load notification IDs:', error);
+      this.notificationIds = {} as NotificationIdMapping;
+    }
+  }
+
+  private async saveNotificationId(
+    activityId: number, 
+    notificationId: string, 
+    scheduledDate: Date, 
+    petName?: string
+  ): Promise<void> {
+    try {
+      this.notificationIds[activityId.toString()] = {
+        notificationId,
+        scheduledDate: scheduledDate.toISOString(),
+        petName,
+      };
+      
+      await AsyncStorage.setItem(NOTIFICATION_IDS_STORAGE_KEY, JSON.stringify(this.notificationIds));
+      console.log(`💾 Saved notification ID ${notificationId} for activity ${activityId}`);
+    } catch (error) {
+      console.error('Failed to save notification ID:', error);
+    }
+  }
+
+  async cancelNotificationForActivity(activityId: number): Promise<boolean> {
+    try {
+      const mapping = this.notificationIds[activityId.toString()];
+      if (mapping) {
+        await Notifications.cancelScheduledNotificationAsync(mapping.notificationId);
+        delete this.notificationIds[activityId.toString()];
+        await AsyncStorage.setItem(NOTIFICATION_IDS_STORAGE_KEY, JSON.stringify(this.notificationIds));
+        console.log(`🗑️ Cancelled notification ${mapping.notificationId} for activity ${activityId}`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to cancel notification for activity:', error);
       return false;
     }
   }
 
   async cancelAllNotificationsForActivity(activityId: number): Promise<void> {
     try {
-      // Get all scheduled notifications
+      // Cancel stored notification
+      await this.cancelNotificationForActivity(activityId);
+      
+      // Also cancel any extension reminders
+      await this.cancelExtensionReminder(activityId);
+      
+      console.log(`🧹 Cancelled all notifications for activity ${activityId}`);
+    } catch (error) {
+      console.error('Failed to cancel all notifications for activity:', error);
+    }
+  }
+
+  async cancelExtensionReminder(activityId: number): Promise<boolean> {
+    try {
       const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
       
-      // Find notifications for this activity, but EXCLUDE extension reminders
-      const activityNotifications = scheduledNotifications.filter(
+      const extensionReminders = scheduledNotifications.filter(
         notification => {
           const data = notification.content.data;
-          return data?.activityId === activityId && data?.type !== 'repeat-extension';
+          return data?.activityId === activityId && data?.type === 'repeat-extension';
         }
       );
 
-      console.log(`🧹 Cancelling ${activityNotifications.length} activity notifications for activity ${activityId} (excluding extension reminders)`);
+      console.log(`🗑️ Found ${extensionReminders.length} extension reminders for activity ${activityId}`);
 
-      // Cancel each notification
-      for (const notification of activityNotifications) {
-        await this.cancelNotification(notification.identifier);
+      for (const notification of extensionReminders) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        console.log(`🗑️ Cancelled extension reminder ${notification.identifier} for activity ${activityId}`);
+      }
+
+      return extensionReminders.length > 0;
+    } catch (error) {
+      console.error('Failed to cancel extension reminders:', error);
+      return false;
+    }
+  }
+
+  async checkAndScheduleMissedNotifications(): Promise<void> {
+    try {
+      console.log('🔍 Checking for missed notifications...');
+      
+      // Get all scheduled notifications
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      const now = new Date();
+      
+      // Check if we have any notifications that should have fired but didn't
+      for (const notification of scheduledNotifications) {
+        const data = notification.content.data;
+        if (data?.activityId && data?.type === 'activity-reminder') {
+          const mapping = this.notificationIds[data.activityId.toString()];
+          if (mapping) {
+            const scheduledDate = new Date(mapping.scheduledDate);
+            if (scheduledDate < now) {
+              console.log(`⚠️ Found missed notification for activity ${data.activityId}`);
+              // Reschedule for next occurrence if it's a repeating activity
+              // This would require fetching the activity from API
+            }
+          }
+        }
       }
     } catch (error) {
-      console.error('Failed to cancel activity notifications:', error);
+      console.error('Failed to check missed notifications:', error);
+    }
+  }
+
+  async cleanupExpiredNotifications(): Promise<void> {
+    try {
+      console.log('🧹 Cleaning up expired notifications...');
+      
+      const now = new Date();
+      const expiredActivityIds: number[] = [];
+      
+      for (const [activityId, mapping] of Object.entries(this.notificationIds)) {
+        const scheduledDate = new Date(mapping.scheduledDate);
+        if (scheduledDate < now) {
+          expiredActivityIds.push(parseInt(activityId as string));
+        }
+      }
+      
+      for (const activityId of expiredActivityIds) {
+        await this.cancelNotificationForActivity(activityId);
+      }
+      
+      if (expiredActivityIds.length > 0) {
+        console.log(`🧹 Cleaned up ${expiredActivityIds.length} expired notifications`);
+      }
+    } catch (error) {
+      console.error('Failed to cleanup expired notifications:', error);
     }
   }
 
   async rescheduleActivityNotification(
     activity: ActivityRecord, 
-    oldNotificationId?: string,
     petName?: string
   ): Promise<string | null> {
     try {
-      // Cancel old notification if it exists
-      if (oldNotificationId) {
-        await this.cancelNotification(oldNotificationId);
-      }
-
-      // Schedule new notification with pet name
+      // Cancel existing notification
+      await this.cancelNotificationForActivity(activity.id);
+      
+      // Schedule new notification
       return await this.scheduleActivityNotification(activity, petName);
     } catch (error) {
       console.error('Failed to reschedule notification:', error);
@@ -426,74 +575,11 @@ export class NotificationService {
     }
   }
 
-  async cancelExtensionReminder(activityId: number): Promise<boolean> {
-    try {
-      // Get all scheduled notifications
-      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-      
-      // Find extension reminder for this activity
-      const extensionReminders = scheduledNotifications.filter(
-        notification => {
-          const data = notification.content.data;
-          return data?.activityId === activityId && data?.type === 'repeat-extension';
-        }
-      );
-
-      console.log(`🗑️ Found ${extensionReminders.length} extension reminders for activity ${activityId}`);
-
-      // Cancel each extension reminder
-      for (const notification of extensionReminders) {
-        await this.cancelNotification(notification.identifier);
-        console.log(`🗑️ Cancelled extension reminder ${notification.identifier} for activity ${activityId}`);
-      }
-
-      return extensionReminders.length > 0;
-    } catch (error) {
-      console.error('Failed to cancel extension reminders:', error);
-      return false;
-    }
-  }
-
-  async getAllNotificationsByType(): Promise<{activityNotifications: any[], extensionReminders: any[], other: any[]}> {
-    try {
-      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-      
-      const activityNotifications = scheduledNotifications.filter(
-        notification => {
-          const data = notification.content.data;
-          return data?.activityId && data?.type !== 'repeat-extension';
-        }
-      );
-
-      const extensionReminders = scheduledNotifications.filter(
-        notification => {
-          const data = notification.content.data;
-          return data?.type === 'repeat-extension';
-        }
-      );
-
-      const other = scheduledNotifications.filter(
-        notification => {
-          const data = notification.content.data;
-          return !data?.activityId && data?.type !== 'repeat-extension';
-        }
-      );
-
-      console.log(`📊 Notification breakdown:`);
-      console.log(`  - Activity notifications: ${activityNotifications.length}`);
-      console.log(`  - Extension reminders: ${extensionReminders.length}`);
-      console.log(`  - Other notifications: ${other.length}`);
-
-      return { activityNotifications, extensionReminders, other };
-    } catch (error) {
-      console.error('Failed to get notifications by type:', error);
-      return { activityNotifications: [], extensionReminders: [], other: [] };
-    }
-  }
-
   async cancelAllNotifications(): Promise<boolean> {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
+      this.notificationIds = {} as NotificationIdMapping;
+      await AsyncStorage.removeItem(NOTIFICATION_IDS_STORAGE_KEY);
       console.log('✅ Cancelled all scheduled notifications');
       return true;
     } catch (error) {
@@ -502,7 +588,6 @@ export class NotificationService {
     }
   }
 
-  // Helper method to check if notifications are available and enabled
   async isNotificationEnabled(): Promise<boolean> {
     if (!Device.isDevice) {
       return false;
@@ -512,10 +597,13 @@ export class NotificationService {
     return status === 'granted';
   }
 
-  // Test method to schedule a simple notification for debugging
+  async getNotificationInfo(activityId: number): Promise<{ notificationId: string; scheduledDate: string; petName?: string } | null> {
+    return this.notificationIds[activityId.toString()] || null;
+  }
+
   async scheduleTestNotification(): Promise<string | null> {
     try {
-      console.log(`🧪 Testing basic notification scheduling...`);
+      console.log(`🧪 Testing enhanced notification scheduling...`);
       
       if (!this.isInitialized) {
         const initialized = await this.initialize();
@@ -525,7 +613,6 @@ export class NotificationService {
         }
       }
 
-      // Schedule a notification for 10 seconds from now
       const testDate = new Date();
       testDate.setSeconds(testDate.getSeconds() + 10);
       
@@ -534,7 +621,7 @@ export class NotificationService {
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: '🧪 Test Notification',
-          body: 'This is a test notification to verify the service works',
+          body: 'This is a test notification to verify the enhanced service works',
           sound: 'default',
           data: { test: true },
         },
@@ -549,6 +636,14 @@ export class NotificationService {
     } catch (error) {
       console.error('🧪 Test: Failed to schedule test notification:', error);
       return null;
+    }
+  }
+
+  // Cleanup method
+  cleanup(): void {
+    if (this.appStateListener) {
+      this.appStateListener.remove();
+      this.appStateListener = null;
     }
   }
 }

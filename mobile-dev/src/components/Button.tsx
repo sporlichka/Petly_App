@@ -132,7 +132,7 @@ export const Button: React.FC<ButtonProps> = ({
         icon && <React.Fragment>{icon}</React.Fragment>
       )}
       {title && !loading && (
-        <Text style={[getTextStyle(), textStyle, icon && { marginLeft: 8 }]}>
+        <Text style={[getTextStyle(), textStyle, icon ? { marginLeft: 8 } : undefined]}>
           {title}
         </Text>
       )}
@@ -153,7 +153,7 @@ export const Button: React.FC<ButtonProps> = ({
         activeOpacity={0.8}
       >
         <LinearGradient
-          colors={Colors.gradient.primary}
+          colors={Colors.gradient.primary as [string, string]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[getButtonStyle(), style]}

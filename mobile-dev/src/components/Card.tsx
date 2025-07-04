@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   TouchableOpacityProps,
 } from 'react-native';
-import { Colors } from '../constants/Colors';
+import { Colors, getActivityColor } from '../constants/Colors';
 
 interface CardProps extends TouchableOpacityProps {
   children: React.ReactNode;
@@ -107,36 +107,52 @@ export const PetCard: React.FC<{
   children: React.ReactNode;
   onPress?: () => void;
   style?: ViewStyle;
-}> = ({ children, onPress, style }) => (
-  <Card
-    variant="elevated"
-    padding="medium"
-    onPress={onPress}
-    style={[styles.petCard, style]}
-  >
-    {children}
-  </Card>
-);
+}> = ({ children, onPress, style }) => {
+  const petCardStyle: ViewStyle = {
+    ...styles.petCard,
+    ...style
+  };
+
+  return (
+    <Card
+      variant="elevated"
+      padding="medium"
+      onPress={onPress}
+      style={petCardStyle}
+    >
+      {children}
+    </Card>
+  );
+};
 
 export const ActivityCard: React.FC<{
   children: React.ReactNode;
   onPress?: () => void;
   style?: ViewStyle;
   category?: string;
-}> = ({ children, onPress, style, category }) => (
-  <Card
-    variant="default"
-    padding="medium"
-    onPress={onPress}
-    style={[
-      styles.activityCard,
-      category && { borderLeftColor: Colors[category as keyof typeof Colors] || Colors.primary },
-      style
-    ]}
-  >
-    {children}
-  </Card>
-);
+}> = ({ children, onPress, style, category }) => {
+  const getBorderColor = () => {
+    if (!category) return Colors.primary;
+    return getActivityColor(category);
+  };
+
+  const activityCardStyle: ViewStyle = {
+    ...styles.activityCard,
+    borderLeftColor: getBorderColor(),
+    ...style
+  };
+
+  return (
+    <Card
+      variant="default"
+      padding="medium"
+      onPress={onPress}
+      style={activityCardStyle}
+    >
+      {children}
+    </Card>
+  );
+};
 
 const styles = StyleSheet.create({
   petCard: {

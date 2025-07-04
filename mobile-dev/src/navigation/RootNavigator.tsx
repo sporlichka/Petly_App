@@ -8,6 +8,8 @@ import { OnboardingNavigator } from './OnboardingNavigator';
 import { apiService } from '../services/api';
 import { Colors } from '../constants/Colors';
 import { notificationService } from '../services/notificationService';
+import { checkAndScheduleMissedNotifications } from '../services/repeatActivityService';
+import { backgroundTaskService } from '../services/backgroundTaskService';
 
 export const RootNavigator: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -19,23 +21,39 @@ export const RootNavigator: React.FC = () => {
   }, []);
 
   const initializeApp = async () => {
-    // Initialize notification service (LOCAL notifications only)
     try {
-      console.log('🔔 Attempting to initialize LOCAL notification service...');
+      console.log('🚀 Initializing Vetly AI app...');
+      
+      // Initialize enhanced notification service
+      console.log('🔔 Initializing enhanced notification service...');
       const notificationInitialized = await notificationService.initialize();
       if (notificationInitialized) {
-        console.log('✅ LOCAL notification service initialized successfully');
+        console.log('✅ Enhanced notification service initialized successfully');
+        
+        // Initialize background task service
+        console.log('🔄 Initializing background task service...');
+        await backgroundTaskService.initialize();
+        
+        // Check for missed notifications after initialization
+        try {
+          await checkAndScheduleMissedNotifications();
+          console.log('✅ Missed notifications check completed');
+        } catch (error) {
+          console.error('❌ Failed to check missed notifications:', error);
+        }
       } else {
-        console.log('⚠️ LOCAL notification service not available (this is normal in simulators)');
+        console.log('⚠️ Enhanced notification service not available (this is normal in simulators)');
       }
-    } catch (error) {
-      console.error('❌ LOCAL notification service initialization failed:', error);
-      // Don't block app startup for notification initialization failures
-      // This is expected in Expo Go or simulators
-    }
 
-    // Check authentication status
-    await checkAuthStatus();
+      // Check authentication status
+      await checkAuthStatus();
+      
+    } catch (error) {
+      console.error('❌ App initialization failed:', error);
+      // Don't block app startup for initialization failures
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const checkAuthStatus = async () => {
@@ -57,8 +75,6 @@ export const RootNavigator: React.FC = () => {
       console.error('❌ Auth check failed:', error);
       setIsAuthenticated(false);
       setHasCompletedOnboarding(false);
-    } finally {
-      setIsLoading(false);
     }
   };
 

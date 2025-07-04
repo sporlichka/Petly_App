@@ -113,7 +113,7 @@ export const useActivityNotifications = () => {
       
       if (storedNotification) {
         // Cancel the notification
-        const success = await notificationService.cancelNotification(storedNotification.notificationId);
+        const success = await notificationService.cancelNotificationForActivity(activityId);
         
         if (success) {
           // Remove from storage
@@ -147,7 +147,6 @@ export const useActivityNotifications = () => {
       // Schedule new notification (this will also cancel the old one)
       const notificationId = await notificationService.rescheduleActivityNotification(
         activity, 
-        oldNotificationId,
         petName
       );
 

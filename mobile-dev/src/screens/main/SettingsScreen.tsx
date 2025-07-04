@@ -18,6 +18,7 @@ import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
 import { notificationService } from '../../services/notificationService';
 import { useActivityNotifications } from '../../hooks/useActivityNotifications';
+import { backgroundTaskService } from '../../services/backgroundTaskService';
 
 interface SettingsScreenProps {
   onLogout: () => void;
@@ -28,6 +29,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [scheduledCount, setScheduledCount] = useState(0);
+  const [backgroundTaskStatus, setBackgroundTaskStatus] = useState<string>('Unknown');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -42,6 +44,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   useEffect(() => {
     loadUserInfo();
     loadNotificationStatus();
+    loadBackgroundTaskStatus();
   }, []);
 
   const loadUserInfo = async () => {
@@ -70,6 +73,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
       }
     } catch (error) {
       console.error('Failed to load notification status:', error);
+    }
+  };
+
+  const loadBackgroundTaskStatus = async () => {
+    try {
+      const statusText = await backgroundTaskService.getBackgroundTaskStatusText();
+      setBackgroundTaskStatus(statusText);
+    } catch (error) {
+      console.error('Failed to load background task status:', error);
+      setBackgroundTaskStatus('Error');
     }
   };
 
@@ -347,6 +360,56 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
               textStyle={styles.disableButtonText}
             />
           )}
+        </View>
+
+        {/* Background Tasks Section */}
+        <View style={styles.settingsSection}>
+          <Text style={styles.sectionTitle}>Background Tasks</Text>
+          
+          <Card style={styles.settingCard}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons 
+                  name="sync-outline" 
+                  size={24} 
+                  color={Colors.primary} 
+                />
+                <View style={styles.notificationInfo}>
+                  <Text style={styles.settingText}>
+                    Background Sync
+                  </Text>
+                  <Text style={styles.notificationSubtext}>
+                    Status: {backgroundTaskStatus}
+                  </Text>
+                </View>
+              </View>
+              <View style={[
+                styles.statusIndicator,
+                { backgroundColor: backgroundTaskStatus === 'Available' ? Colors.success : Colors.textSecondary }
+              ]} />
+            </View>
+          </Card>
+
+          <Card style={styles.settingCard}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons 
+                  name="time-outline" 
+                  size={24} 
+                  color={Colors.primary} 
+                />
+                <View style={styles.notificationInfo}>
+                  <Text style={styles.settingText}>
+                    Missed Notifications Check
+                  </Text>
+                  <Text style={styles.notificationSubtext}>
+                    Automatically reschedules missed reminders
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+            </View>
+          </Card>
         </View>
 
         {/* Settings Options */}

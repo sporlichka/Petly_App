@@ -117,7 +117,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={Colors.gradient.background}
+      colors={Colors.gradient.background as [string, string]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>

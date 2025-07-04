@@ -14,7 +14,13 @@
       "backgroundColor": "#FFC107"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": ["fetch", "remote-notification", "background-processing"],
+        "NSUserNotificationsUsageDescription": "Vetly AI needs notifications to remind you about your pet's activities and health checks.",
+        "NSCameraUsageDescription": "Vetly AI needs camera access to take photos of your pets.",
+        "NSPhotoLibraryUsageDescription": "Vetly AI needs photo library access to select pet photos."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +31,10 @@
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "WAKE_LOCK"
+        "WAKE_LOCK",
+        "SCHEDULE_EXACT_ALARM",
+        "USE_EXACT_ALARM",
+        "POST_NOTIFICATIONS"
       ],
       "package": "com.tabchny.vetlyai"
     },
@@ -41,6 +50,12 @@
           "sounds": [
             "./assets/notification.wav"
           ]
+        }
+      ],
+      [
+        "expo-background-fetch",
+        {
+          "minimumInterval": 3600
         }
       ]
     ],
