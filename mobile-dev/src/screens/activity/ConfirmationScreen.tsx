@@ -11,6 +11,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { ActivityStackParamList, ActivityRecordCreate, ActivityRecordUpdate } from '../../types';
 import { Button } from '../../components/Button';
@@ -36,6 +37,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   navigation,
   route,
 }) => {
+  const { t, i18n } = useTranslation();
   const { petId, category, editActivity, activityData, preselectedDate, fromScreen } = route.params;
   const [isSaving, setIsSaving] = useState(false);
   const isEditMode = !!editActivity;
@@ -68,19 +70,19 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   const getCategoryInfo = () => {
     switch (category) {
       case 'FEEDING':
-        return { emoji: '🥣', color: Colors.feeding, title: 'Feeding Activity' };
+        return { emoji: '🥣', color: Colors.feeding, title: t('activity.feeding_activity') };
       case 'HEALTH':
-        return { emoji: '🩺', color: Colors.health, title: 'Health Activity' };
+        return { emoji: '🩺', color: Colors.health, title: t('activity.health_activity') };
       case 'ACTIVITY':
-        return { emoji: '🎾', color: Colors.activity, title: 'Physical Activity' };
+        return { emoji: '🎾', color: Colors.activity, title: t('activity.physical_activity') };
       default:
-        return { emoji: '📝', color: Colors.primary, title: 'Activity' };
+        return { emoji: '📝', color: Colors.primary, title: t('activity.title') };
     }
   };
 
   const formatDateTime = () => {
     if (!activityData.date || !activityData.time) {
-      return 'Now';
+      return t('activity.now');
     }
     
     const date = new Date(activityData.date);
@@ -95,7 +97,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
       time.getMinutes()
     );
     
-    return combined.toLocaleDateString('en-US', {
+    return combined.toLocaleDateString(i18n.language, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -107,13 +109,13 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   const getRepeatText = () => {
     switch (activityData.repeat) {
       case 'daily':
-        return '🔄 Daily';
+        return `🔄 ${t('activity.daily')}`;
       case 'weekly':
-        return '📆 Weekly';
+        return `📆 ${t('activity.weekly')}`;
       case 'monthly':
-        return '🗓️ Monthly';
+        return `🗓️ ${t('activity.monthly')}`;
       default:
-        return '📅 One-time';
+        return `📅 ${t('activity.one_time')}`;
     }
   };
 
@@ -186,25 +188,12 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           // Don't block the success flow for notification errors
         }
         
-        Alert.alert(
-          'Activity Updated! ✅',
-          `${activityData.title} has been successfully updated.${activityData.notifications ? '\n\n📱 Reminder has been updated!' : ''}`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigate back to the source screen
-                if (fromScreen === 'Calendar') {
-                  // Navigate back to Calendar tab - need to go up to MainNavigator (Tab Navigator)
-                  navigation.getParent()?.getParent()?.navigate('Calendar');
-                } else {
-                  // Default behavior - navigate back to activities list
-                  navigation.getParent()?.goBack();
-                }
-              }
-            }
-          ]
-        );
+        // Remove Alert.alert and navigate directly after update
+        if (fromScreen === 'Calendar') {
+          navigation.getParent()?.getParent()?.navigate('Calendar');
+        } else {
+          navigation.getParent()?.goBack();
+        }
       } else {
         // Create new activity with repeats
         const activityRecord: ActivityRecordCreate = {
@@ -244,33 +233,17 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           ? `${activityData.title} has been added to your pet's activity log.\n\n📅 Created ${totalCreated} activities total (including ${repeatResult.repeatActivities.length} repeats).${repeatResult.notificationIds.length > 0 ? `\n\n📱 ${repeatResult.notificationIds.length} reminders have been set!` : ''}${repeatResult.extensionReminderId ? '\n\n⏰ Extension reminder scheduled!' : ''}`
           : `${activityData.title} has been added to your pet's activity log.${activityData.notifications ? '\n\n📱 Reminder has been set!' : ''}`;
 
-        Alert.alert(
-          'Activity Saved! 🎉',
-          successMessage,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigate back to the source screen
-                if (fromScreen === 'Calendar') {
-                  // Navigate back to Calendar tab - need to go up to MainNavigator (Tab Navigator)
-                  navigation.getParent()?.getParent()?.navigate('Calendar');
-                } else {
-                  // Default behavior - navigate back to the home stack, specifically to PetDetail
-                  navigation.getParent()?.goBack();
-                }
-              }
-            }
-          ]
-        );
+        // Remove Alert.alert and navigate directly after creation
+        if (fromScreen === 'Calendar') {
+          navigation.getParent()?.getParent()?.navigate('Calendar');
+        } else {
+          navigation.getParent()?.goBack();
+        }
       }
     } catch (error) {
       console.error('Failed to save activity:', error);
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to save activity. Please try again.',
-        [{ text: 'OK' }]
-      );
+      // Remove Alert.alert for error, but keep error logging
+      // Optionally, you could add a non-blocking error toast/snackbar here
     } finally {
       setIsSaving(false);
     }
@@ -294,12 +267,12 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
               <Text style={styles.emoji}>{categoryInfo.emoji}</Text>
             </View>
             <Text style={styles.title}>
-              {isEditMode ? 'Review Changes' : 'Review & Save'}
+              {isEditMode ? t('activity.review_changes') : t('activity.review_save')}
             </Text>
             <Text style={styles.subtitle}>
               {isEditMode 
-                ? 'Check the updated details and save changes'
-                : 'Check the details and save this activity'
+                ? t('activity.check_updated_details')
+                : t('activity.check_details')
               }
             </Text>
           </View>
@@ -312,7 +285,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
             <View style={styles.detailRow}>
               <Ionicons name="create-outline" size={20} color={categoryInfo.color} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Title</Text>
+                <Text style={styles.detailLabel}>{t('activity.title_label')}</Text>
                 <Text style={styles.detailValue}>{activityData.title}</Text>
               </View>
             </View>
@@ -321,7 +294,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
             <View style={styles.detailRow}>
               <Ionicons name="time-outline" size={20} color={categoryInfo.color} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Date & Time</Text>
+                <Text style={styles.detailLabel}>{t('activity.date_time_label')}</Text>
                 <Text style={styles.detailValue}>{formatDateTime()}</Text>
               </View>
             </View>
@@ -330,7 +303,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
             <View style={styles.detailRow}>
               <Ionicons name="repeat-outline" size={20} color={categoryInfo.color} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Repeat</Text>
+                <Text style={styles.detailLabel}>{t('activity.repeat_label')}</Text>
                 <Text style={styles.detailValue}>{getRepeatText()}</Text>
                 {repeatSummary.willCreateRepeats && (
                   <Text style={styles.detailSubtext}>{repeatSummary.description}</Text>
@@ -343,8 +316,8 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
               <View style={styles.detailRow}>
                 <Ionicons name="notifications-outline" size={20} color={categoryInfo.color} />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Notifications</Text>
-                  <Text style={styles.detailValue}>Enabled</Text>
+                  <Text style={styles.detailLabel}>{t('activity.notifications_label')}</Text>
+                  <Text style={styles.detailValue}>{t('activity.enabled_label')}</Text>
                 </View>
               </View>
             )}
@@ -353,13 +326,13 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           {/* Category-specific Details */}
           {(activityData.food_type || activityData.quantity || activityData.duration) && (
             <Card variant="default" style={styles.detailsCard}>
-              <Text style={styles.sectionTitle}>Additional Details</Text>
+              <Text style={styles.sectionTitle}>{t('activity.additional_details')}</Text>
               
               {activityData.food_type && (
                 <View style={styles.detailRow}>
                   <Ionicons name="restaurant" size={20} color={Colors.textSecondary} />
                   <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Food Type</Text>
+                    <Text style={styles.detailLabel}>{t('activity.food_type')}</Text>
                     <Text style={styles.detailValue}>{activityData.food_type}</Text>
                   </View>
                 </View>
@@ -369,7 +342,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
                 <View style={styles.detailRow}>
                   <Ionicons name="scale-outline" size={20} color={Colors.textSecondary} />
                   <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Quantity</Text>
+                    <Text style={styles.detailLabel}>{t('activity.quantity_label')}</Text>
                     <Text style={styles.detailValue}>{activityData.quantity}</Text>
                   </View>
                 </View>
@@ -379,7 +352,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
                 <View style={styles.detailRow}>
                   <Ionicons name="timer-outline" size={20} color={Colors.textSecondary} />
                   <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Duration</Text>
+                    <Text style={styles.detailLabel}>{t('activity.duration_label')}</Text>
                     <Text style={styles.detailValue}>{activityData.duration}</Text>
                   </View>
                 </View>
@@ -390,14 +363,14 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           {/* Notes */}
           {activityData.notes && (
             <Card variant="default" style={styles.notesCard}>
-              <Text style={styles.sectionTitle}>Notes</Text>
+              <Text style={styles.sectionTitle}>{t('activity.notes_label')}</Text>
               <Text style={styles.notesText}>{activityData.notes}</Text>
             </Card>
           )}
 
           {/* Save Button */}
           <Button
-            title={isEditMode ? "Update Activity" : "Save Activity"}
+            title={isEditMode ? t('activity.update_activity_button') : t('activity.save_activity_button')}
             onPress={handleSaveActivity}
             loading={isSaving}
             size="large"
@@ -406,7 +379,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
 
           {/* Progress */}
           <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>Step 5 of 5</Text>
+            <Text style={styles.progressText}>{t('activity.step_of', { current: 5, total: 5 })}</Text>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: '100%' }]} />
             </View>

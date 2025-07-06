@@ -11,10 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Calendar } from 'react-native-calendars';
+import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { useFocusEffect, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 
 import { Colors } from '../../constants/Colors';
 import { ActivityRecord, Pet, ActivityCategory, MainTabParamList, HomeStackParamList } from '../../types';
@@ -44,40 +45,42 @@ interface PetSelectorModalProps {
   onCancel: () => void;
 }
 
-const PetSelectorModal: React.FC<PetSelectorModalProps> = ({ pets, onSelectPet, onCancel }) => (
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContent}>
-      <Text style={styles.modalTitle}>Select a Pet</Text>
-      <Text style={styles.modalSubtitle}>Choose which pet to add an activity for</Text>
-      
-      <ScrollView style={styles.petList}>
-        {pets.map((pet) => (
-          <TouchableOpacity
-            key={pet.id}
-            style={styles.petItem}
-            onPress={() => onSelectPet(pet.id)}
-          >
-            <Text style={styles.petEmoji}>🐾</Text>
-            <View style={styles.petInfo}>
-              <Text style={styles.petName}>{pet.name}</Text>
-              <Text style={styles.petDetails}>{pet.species} • {pet.breed}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-      
-      <Button
-        title="Cancel"
-        onPress={onCancel}
-        variant="secondary"
-        style={styles.cancelButton}
-      />
+const PetSelectorModal: React.FC<PetSelectorModalProps> = ({ pets, onSelectPet, onCancel }) => {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <Text style={styles.modalTitle}>{t('calendar.select_pet')}</Text>
+        <Text style={styles.modalSubtitle}>{t('calendar.choose_pet')}</Text>
+        <ScrollView style={styles.petList}>
+          {pets.map((pet) => (
+            <TouchableOpacity
+              key={pet.id}
+              style={styles.petItem}
+              onPress={() => onSelectPet(pet.id)}
+            >
+              <Text style={styles.petEmoji}>🐾</Text>
+              <View style={styles.petInfo}>
+                <Text style={styles.petName}>{pet.name}</Text>
+                <Text style={styles.petDetails}>{pet.species} • {pet.breed}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <Button
+          title={t('calendar.cancel')}
+          onPress={onCancel}
+          variant="secondary"
+          style={styles.cancelButton}
+        />
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) => {
+  const { t, i18n } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -88,6 +91,45 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showPetSelector, setShowPetSelector] = useState(false);
+
+  // --- LocaleConfig for calendar localization ---
+  React.useEffect(() => {
+    LocaleConfig.locales['en'] = {
+      monthNames: [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ],
+      monthNamesShort: [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ],
+      dayNames: [
+        'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
+      ],
+      dayNamesShort: [
+        'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
+      ],
+      today: 'Today'
+    };
+    LocaleConfig.locales['ru'] = {
+      monthNames: [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+      ],
+      monthNamesShort: [
+        'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн',
+        'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'
+      ],
+      dayNames: [
+        'Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'
+      ],
+      dayNamesShort: [
+        'Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'
+      ],
+      today: 'Сегодня'
+    };
+    LocaleConfig.defaultLocale = i18n.language.startsWith('ru') ? 'ru' : 'en';
+  }, [i18n.language]);
 
   const getCategoryColor = (category: ActivityCategory): string => {
     switch (category) {
@@ -129,7 +171,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
       await loadActivitiesForDate(selectedDate);
     } catch (error) {
       console.error('Failed to load data:', error);
-      Alert.alert('Error', 'Failed to load calendar data. Please try again.');
+      Alert.alert(t('calendar.error'), t('calendar.failed_to_load'));
     } finally {
       setLoading(false);
     }
@@ -150,13 +192,13 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
       // Show user-friendly error message
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       if (errorMessage.includes('authentication') || errorMessage.includes('401')) {
-        Alert.alert('Authentication Error', 'Please log in again to continue.');
+        Alert.alert(t('calendar.authentication_error'), t('calendar.please_log_in'));
       } else if (!errorMessage.includes('Network')) {
         // Only show alert for non-network errors to avoid spam
         Alert.alert(
-          'Loading Error', 
-          'Unable to load activities for this date. Using cached data instead.',
-          [{ text: 'OK' }]
+          t('calendar.loading_error'),
+          t('calendar.unable_to_load_activities'),
+          [{ text: t('common.ok') }]
         );
       }
       
@@ -194,9 +236,9 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
         console.error('Fallback also failed:', fallbackError);
         // If both fail, show error but don't crash
         Alert.alert(
-          'Connection Error',
-          'Unable to load calendar data. Please check your internet connection and try again.',
-          [{ text: 'OK' }]
+          t('calendar.connection_error'),
+          t('calendar.unable_to_load_calendar'),
+          [{ text: t('common.ok') }]
         );
       }
     }
@@ -256,7 +298,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
 
   const handleAddActivity = () => {
     if (pets.length === 0) {
-      Alert.alert('No Pets', 'Please add a pet first before creating activities.');
+      Alert.alert(t('calendar.no_pets'), t('calendar.please_add_pet'));
       return;
     }
     
@@ -311,21 +353,21 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
 
   const handleDeleteActivity = (activity: ActivityRecord) => {
     Alert.alert(
-      'Delete Activity',
-      `Are you sure you want to delete "${activity.title}"?`,
+      t('calendar.delete_activity'),
+      t('calendar.delete_activity_confirm', { title: activity.title }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('calendar.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('calendar.delete_activity'),
           style: 'destructive',
           onPress: async () => {
             try {
               await apiService.deleteActivityRecord(activity.id);
               await loadData(); // Reload data after deletion
-              Alert.alert('Success', 'Activity deleted successfully.');
+              Alert.alert(t('calendar.success'), t('calendar.activity_deleted'));
             } catch (error) {
               console.error('Failed to delete activity:', error);
-              Alert.alert('Error', 'Failed to delete activity. Please try again.');
+              Alert.alert(t('calendar.error'), t('calendar.failed_to_delete'));
             }
           },
         },
@@ -334,14 +376,14 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
   };
 
   const formatTime = (dateTime: string): string => {
-    return new Date(dateTime).toLocaleTimeString('en-US', {
+    return new Date(dateTime).toLocaleTimeString(i18n.language, {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
   const formatSelectedDate = (): string => {
-    return new Date(selectedDate).toLocaleDateString('en-US', {
+    return new Date(selectedDate).toLocaleDateString(i18n.language, {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
@@ -402,9 +444,9 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
   if (loading) {
     return (
       <LinearGradient colors={Colors.gradient.background as any} style={styles.container}>
-        <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+        <SafeAreaView style={styles.safeArea} edges={['top','bottom']}>
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading calendar...</Text>
+            <Text style={styles.loadingText}>{t('calendar.loading_calendar')}</Text>
           </View>
         </SafeAreaView>
       </LinearGradient>
@@ -413,7 +455,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
 
   return (
     <LinearGradient colors={Colors.gradient.background as any} style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['top','bottom']}>
         <ScrollView
           style={styles.scrollView}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -510,9 +552,9 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
             ) : (
               <Card variant="default" style={styles.emptyStateCard}>
                 <Text style={styles.emptyEmoji}>🐾</Text>
-                <Text style={styles.emptyTitle}>No activities on this date yet</Text>
+                <Text style={styles.emptyTitle}>{t('calendar.no_activities')}</Text>
                 <Text style={styles.emptyDescription}>
-                  Tap the + button to add your first activity for {formatSelectedDate()}
+                  {t('calendar.tap_to_add', { date: formatSelectedDate() })}
                 </Text>
               </Card>
             )}
@@ -522,7 +564,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
         {/* Floating Add Button */}
         <View style={styles.fab}>
           <Button
-            title="+ Add Record"
+            title={t('calendar.add_record')}
             onPress={handleAddActivity}
             variant="secondary"
             size="small"
@@ -544,7 +586,6 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     </LinearGradient>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -738,3 +779,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 }); 
+

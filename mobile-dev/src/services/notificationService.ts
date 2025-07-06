@@ -10,11 +10,10 @@ import { ActivityRecord } from '../types';
 // Configure notification behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true, // Show as a banner (iOS 14+)
+    shouldShowList: true,   // Show in notification center (iOS 14+)
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
   }),
 });
 
@@ -303,13 +302,15 @@ export class NotificationService {
         console.log(`✅ Manual parsing result:`, {
           input: dateString,
           result: parsedDate.toISOString(),
-          local: parsedDate.toLocaleString()
+          local: parsedDate.toLocaleString(),
+          hours: parsedDate.getHours(),
+          minutes: parsedDate.getMinutes()
         });
         
         return parsedDate;
       }
       
-      // Fallback parsing
+      // Fallback parsing - treat as local time
       const normalizedDate = dateString.replace('T', ' ');
       const date = new Date(normalizedDate);
       
@@ -320,7 +321,9 @@ export class NotificationService {
       console.log(`⚠️ Fallback date parsing successful:`, {
         original: dateString,
         parsed: date.toISOString(),
-        local: date.toLocaleString()
+        local: date.toLocaleString(),
+        hours: date.getHours(),
+        minutes: date.getMinutes()
       });
       
       return date;
@@ -447,7 +450,7 @@ export class NotificationService {
         delete this.notificationIds[activityId.toString()];
         await AsyncStorage.setItem(NOTIFICATION_IDS_STORAGE_KEY, JSON.stringify(this.notificationIds));
         console.log(`🗑️ Cancelled notification ${mapping.notificationId} for activity ${activityId}`);
-        return true;
+      return true;
       }
       return false;
     } catch (error) {
@@ -498,7 +501,7 @@ export class NotificationService {
   async checkAndScheduleMissedNotifications(): Promise<void> {
     try {
       console.log('🔍 Checking for missed notifications...');
-      
+
       // Get all scheduled notifications
       const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
       const now = new Date();
@@ -556,7 +559,7 @@ export class NotificationService {
     try {
       // Cancel existing notification
       await this.cancelNotificationForActivity(activity.id);
-      
+
       // Schedule new notification
       return await this.scheduleActivityNotification(activity, petName);
     } catch (error) {

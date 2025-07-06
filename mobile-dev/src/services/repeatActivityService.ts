@@ -65,10 +65,11 @@ async function scheduleMonthlyNotifications(
   startDate: Date
 ): Promise<string[]> {
   const notificationIds: string[] = [];
-  
   try {
-    console.log(`📅 Scheduling monthly notifications for activity ${activity.id}`);
-    
+    console.log(`📅 Scheduling notifications for activity ${activity.id}`);
+    // Отменяем все старые уведомления для этой активности
+    await notificationService.cancelAllNotificationsForActivity(activity.id);
+
     if (!activity.repeat || activity.repeat === 'none') {
       // Для одиночных активностей планируем только одно уведомление
       const notificationId = await scheduleNotificationForActivity(activity, petName);
@@ -78,51 +79,40 @@ async function scheduleMonthlyNotifications(
       return notificationIds;
     }
 
-    // Для повторяющихся активностей планируем уведомления на месяц вперед
+    // Для повторяющихся активностей планируем уведомления только на нужные даты
     const repeatType = activity.repeat as 'daily' | 'weekly' | 'monthly';
-    const endDate = dayjs(startDate).add(1, 'month').toDate();
-    
-    console.log(`📅 Planning notifications from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
-    
-    let currentDate = dayjs(startDate);
+    const repeatDates = getRepeatDates(startDate, repeatType);
     let notificationCount = 0;
-    const maxNotifications = 30; // Ограничение для предотвращения спама
-    
-    while (currentDate.isBefore(endDate) && notificationCount < maxNotifications) {
-      const activityDate = currentDate.toDate();
+    for (const date of repeatDates) {
+      // Формируем дату в локальном времени, сохраняя оригинальное время
+      const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), startDate.getHours(), startDate.getMinutes(), startDate.getSeconds());
       
-      // Создаем временную активность для планирования уведомления
-      const tempActivity: ActivityRecord = {
-        ...activity,
-        date: activityDate.toISOString().replace('Z', '').slice(0, 19), // Формат YYYY-MM-DDTHH:mm:ss
-        time: activityDate.toISOString().replace('Z', '').slice(0, 19),
+      // Используем локальное форматирование времени вместо toISOString()
+      const formatLocalDateTime = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
       };
       
+      const tempActivity: ActivityRecord = {
+        ...activity,
+        date: formatLocalDateTime(localDate),
+        time: formatLocalDateTime(localDate),
+      };
       const notificationId = await scheduleNotificationForActivity(tempActivity, petName);
       if (notificationId) {
         notificationIds.push(notificationId);
         notificationCount++;
       }
-      
-      // Переходим к следующей дате в зависимости от типа повторения
-      switch (repeatType) {
-        case 'daily':
-          currentDate = currentDate.add(1, 'day');
-          break;
-        case 'weekly':
-          currentDate = currentDate.add(1, 'week');
-          break;
-        case 'monthly':
-          currentDate = currentDate.add(1, 'month');
-          break;
-      }
     }
-    
-    console.log(`✅ Scheduled ${notificationIds.length} monthly notifications for activity ${activity.id}`);
+    console.log(`✅ Scheduled ${notificationIds.length} notifications for activity ${activity.id}`);
     return notificationIds;
-    
   } catch (error) {
-    console.error(`❌ Failed to schedule monthly notifications for activity ${activity.id}:`, error);
+    console.error(`❌ Failed to schedule notifications for activity ${activity.id}:`, error);
     return notificationIds;
   }
 }
@@ -221,23 +211,11 @@ export async function createActivityWithRepeats(
       }
     });
 
-    // 6. Планируем уведомления для повторяющихся активностей
-    console.log(`🔔 Planning notifications for ${result.repeatActivities.length} repeat activities`);
+    // 6. НЕ планируем уведомления для повторяющихся активностей
+    // Уведомления уже запланированы для основной активности в scheduleMonthlyNotifications
+    console.log(`🔔 Skipping notification scheduling for ${result.repeatActivities.length} repeat activities (already handled by main activity)`);
     
-    try {
-      const petName = await getPetName(mainActivity.pet_id);
-
-      // Планируем уведомления для каждой повторяющейся активности
-      for (const repeatActivity of result.repeatActivities) {
-        const repeatNotificationIds = await scheduleMonthlyNotifications(repeatActivity, petName, new Date(repeatActivity.date));
-        result.notificationIds.push(...repeatNotificationIds);
-      }
-
-      console.log(`✅ Scheduled ${result.notificationIds.length} total notifications`);
-    } catch (error) {
-      console.error('❌ Failed to schedule repeat activity notifications:', error);
-      result.errors.push(`Failed to schedule repeat activity notifications: ${error}`);
-    }
+    console.log(`✅ Total notifications scheduled: ${result.notificationIds.length}`);
 
     // 7. Планируем напоминание о продлении
     try {
@@ -359,17 +337,8 @@ export async function updateActivityWithRepeats(
           }
         });
 
-        // Планируем уведомления для новых повторений
-        try {
-          const petName = await getPetName(updatedActivity.pet_id);
-          for (const repeatActivity of result.repeatActivities) {
-            const repeatNotificationIds = await scheduleMonthlyNotifications(repeatActivity, petName, new Date(repeatActivity.date));
-            result.notificationIds.push(...repeatNotificationIds);
-          }
-        } catch (error) {
-          console.error('❌ Failed to schedule notifications for updated repeats:', error);
-          result.errors.push(`Failed to schedule updated repeat notifications: ${error}`);
-        }
+        // НЕ планируем уведомления для новых повторений - они уже запланированы в основной активности
+        console.log(`🔔 Skipping notification scheduling for ${result.repeatActivities.length} updated repeat activities (already handled by main activity)`);
       }
     }
 
@@ -446,10 +415,21 @@ export async function checkAndScheduleMissedNotifications(): Promise<void> {
             const petName = await getPetName(activity.pet_id);
             const nextDate = dayjs(now).add(1, 'day').toDate(); // Начинаем с завтра
             
+            // Используем локальное форматирование времени
+            const formatLocalDateTime = (date: Date): string => {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              const hours = String(date.getHours()).padStart(2, '0');
+              const minutes = String(date.getMinutes()).padStart(2, '0');
+              const seconds = String(date.getSeconds()).padStart(2, '0');
+              return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+            };
+            
             const tempActivity: ActivityRecord = {
               ...activity,
-              date: nextDate.toISOString().replace('Z', '').slice(0, 19),
-              time: nextDate.toISOString().replace('Z', '').slice(0, 19),
+              date: formatLocalDateTime(nextDate),
+              time: formatLocalDateTime(nextDate),
             };
             
             await scheduleMonthlyNotifications(tempActivity, petName, nextDate);

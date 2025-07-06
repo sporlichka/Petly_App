@@ -14,6 +14,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { HomeStackParamList, PetUpdate, PetFormData, PetGender, Pet } from '../../types';
 import { Button } from '../../components/Button';
@@ -33,6 +34,7 @@ interface EditPetScreenProps {
 }
 
 export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route }) => {
+  const { t, i18n } = useTranslation();
   const { petId } = route.params;
   
   const [pet, setPet] = useState<Pet | null>(null);
@@ -54,6 +56,24 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
     loadPetDetails();
   }, [petId]);
 
+  React.useEffect(() => {
+    if (pet) {
+      navigation.setOptions({
+        title: t('pet_form.edit_title', { name: pet.name }),
+      });
+    }
+  }, [navigation, t, pet]);
+
+  const getPetEmoji = (species: string) => {
+    const s = species.trim().toLowerCase();
+    if (['dog', 'собака'].includes(s)) return '🐕';
+    if (['cat', 'кошка', 'кот'].includes(s)) return '🐱';
+    if (['bird', 'птица'].includes(s)) return '🐦';
+    if (['rabbit', 'кролик'].includes(s)) return '🐰';
+    if (['fish', 'рыба'].includes(s)) return '🐟';
+    return '🐾';
+  };
+
   const loadPetDetails = async () => {
     try {
       setIsLoadingPet(true);
@@ -73,14 +93,14 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
           notes: currentPet.notes || '',
         });
       } else {
-        Alert.alert('Error', 'Pet not found', [
-          { text: 'OK', onPress: () => navigation.goBack() }
+        Alert.alert(t('pet_form.error'), t('pet_form.pet_not_found'), [
+          { text: t('common.ok'), onPress: () => navigation.goBack() }
         ]);
       }
     } catch (error) {
       console.error('Failed to load pet details:', error);
-      Alert.alert('Error', 'Failed to load pet details', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      Alert.alert(t('pet_form.error'), t('pet_form.error_edit'), [
+        { text: t('common.ok'), onPress: () => navigation.goBack() }
       ]);
     } finally {
       setIsLoadingPet(false);
@@ -91,15 +111,15 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
     const newErrors: Partial<PetFormData> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Pet name is required';
+      newErrors.name = t('pet_form.name_label') + ' ' + t('validation.required');
     }
 
     if (!formData.species.trim()) {
-      newErrors.species = 'Species is required';
+      newErrors.species = t('pet_form.species_label') + ' ' + t('validation.required');
     }
 
     if (!formData.weight || isNaN(parseFloat(formData.weight))) {
-      newErrors.weight = 'Please enter a valid weight';
+      newErrors.weight = t('validation.weight_positive');
     }
 
     setErrors(newErrors);
@@ -125,11 +145,11 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
       
       // Show success message and navigate back to pet detail
       Alert.alert(
-        'Success! 🎉',
-        `${formData.name}'s information has been updated!`,
+        t('pet_form.success_edit'),
+        t('pet_form.success_edit_message', { name: formData.name }),
         [
           {
-            text: 'OK',
+            text: t('common.ok'),
             onPress: () => {
               navigation.goBack();
             }
@@ -138,9 +158,9 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
       );
     } catch (error) {
       Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to update pet information. Please try again.',
-        [{ text: 'OK' }]
+        t('pet_form.error'),
+        error instanceof Error ? error.message : t('pet_form.error_edit'),
+        [{ text: t('common.ok') }]
       );
     } finally {
       setIsLoading(false);
@@ -156,7 +176,7 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
   };
 
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(i18n.language, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -180,7 +200,7 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
       >
         <SafeAreaView style={styles.safeArea} edges={['bottom']}>
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading pet details... 🐾</Text>
+            <Text style={styles.loadingText}>{t('pet_form.loading_details')}</Text>
           </View>
         </SafeAreaView>
       </LinearGradient>
@@ -195,10 +215,10 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
       >
         <SafeAreaView style={styles.safeArea} edges={['bottom']}>
           <View style={styles.errorContainer}>
-            <Text style={styles.errorTitle}>Pet not found</Text>
-            <Text style={styles.errorText}>This pet may have been deleted.</Text>
+            <Text style={styles.errorTitle}>{t('pet_form.pet_not_found')}</Text>
+            <Text style={styles.errorText}>{t('pet_form.pet_deleted')}</Text>
             <Button
-              title="Go Back"
+              title={t('pet_form.go_back')}
               onPress={() => navigation.goBack()}
               style={styles.goBackButton}
             />
@@ -224,20 +244,18 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
           >
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.emoji}>✏️</Text>
-              <Text style={styles.title}>Edit {pet.name}</Text>
-              <Text style={styles.subtitle}>
-                Update your pet's information
-              </Text>
+              <Text style={styles.emoji}>{getPetEmoji(formData.species)}</Text>
+              <Text style={styles.title}>{t('pet_form.edit_title', { name: pet.name })}</Text>
+              <Text style={styles.subtitle}>{t('pet_form.edit_subtitle')}</Text>
             </View>
 
             {/* Pet Form */}
             <Card variant="elevated" style={styles.formCard}>
-              <Text style={styles.formTitle}>Pet Information</Text>
+              <Text style={styles.formTitle}>{t('pet_form.form_title')}</Text>
               
               <Input
-                label="Pet Name *"
-                placeholder="What's your pet's name?"
+                label={t('pet_form.name_label')}
+                placeholder={t('pet_form.name_placeholder')}
                 value={formData.name}
                 onChangeText={(text) => updateFormData('name', text)}
                 error={errors.name}
@@ -248,8 +266,8 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
               />
 
               <Input
-                label="Species *"
-                placeholder="e.g., Dog, Cat, Rabbit, Bird..."
+                label={t('pet_form.species_label')}
+                placeholder={t('pet_form.species_placeholder')}
                 value={formData.species}
                 onChangeText={(text) => updateFormData('species', text)}
                 error={errors.species}
@@ -260,15 +278,17 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
               />
 
               <GenderPicker
-                label="Gender *"
+                label={t('pet_form.gender_label')}
                 value={formData.gender}
                 onValueChange={(gender) => updateFormData('gender', gender)}
                 error={errors.gender}
+                maleLabel={t('pet_form.male')}
+                femaleLabel={t('pet_form.female')}
               />
 
               <Input
-                label="Breed (Optional)"
-                placeholder="e.g., Golden Retriever, Persian..."
+                label={t('pet_form.breed_label')}
+                placeholder={t('pet_form.breed_placeholder')}
                 value={formData.breed}
                 onChangeText={(text) => updateFormData('breed', text)}
                 error={errors.breed}
@@ -280,7 +300,7 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
 
               {/* Birthdate Picker */}
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Birthdate *</Text>
+                <Text style={styles.inputLabel}>{t('pet_form.birthdate_label')}</Text>
                 <TouchableOpacity
                   style={styles.datePickerButton}
                   onPress={() => setShowDatePicker(true)}
@@ -298,13 +318,13 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
                 onConfirm={onDateConfirm}
                 onCancel={onDateCancel}
                 maximumDate={new Date()}
-                title="Edit Birthdate"
-                confirmButtonText="Apply"
+                title={t('pet_form.birthdate_edit_picker_title')}
+                confirmButtonText={t('pet_form.birthdate_apply')}
               />
 
               <Input
-                label="Weight (kg) *"
-                placeholder="Enter weight in kilograms"
+                label={t('pet_form.weight_label')}
+                placeholder={t('pet_form.weight_placeholder')}
                 value={formData.weight}
                 onChangeText={(text) => updateFormData('weight', text)}
                 error={errors.weight}
@@ -315,8 +335,8 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
               />
 
               <Input
-                label="Notes (Optional)"
-                placeholder="Any special notes about your pet..."
+                label={t('pet_form.notes_label')}
+                placeholder={t('pet_form.notes_placeholder')}
                 value={formData.notes}
                 onChangeText={(text) => updateFormData('notes', text)}
                 error={errors.notes}
@@ -328,7 +348,7 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
               />
 
               <Button
-                title="Update Pet"
+                title={t('pet_form.edit_button')}
                 onPress={handleUpdatePet}
                 loading={isLoading}
                 size="large"
@@ -338,9 +358,7 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
 
             {/* Helper Text */}
             <View style={styles.helperContainer}>
-              <Text style={styles.helperText}>
-                💡 Changes will be saved immediately and reflected across all screens.
-              </Text>
+              <Text style={styles.helperText}>{t('pet_form.helper_edit')}</Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

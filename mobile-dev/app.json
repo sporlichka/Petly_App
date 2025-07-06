@@ -39,9 +39,7 @@
         "WAKE_LOCK",
         "SCHEDULE_EXACT_ALARM",
         "USE_EXACT_ALARM",
-        "POST_NOTIFICATIONS",
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.WAKE_LOCK"
+        "POST_NOTIFICATIONS"
       ],
       "package": "com.tabchny.vetlyai"
     },
@@ -61,7 +59,8 @@
         {
           "minimumInterval": 3600
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "extra": {
       "eas": {

@@ -7,12 +7,13 @@ import {
   Platform,
   ScrollView,
   Alert,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { OnboardingStackParamList, PetCreate, PetFormData, PetGender } from '../../types';
 import { Button } from '../../components/Button';
@@ -30,6 +31,8 @@ interface AddPetScreenProps {
 }
 
 export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
+  const { t, i18n } = useTranslation();
+  
   const [formData, setFormData] = useState<PetFormData>({
     name: '',
     species: '',
@@ -47,15 +50,15 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
     const newErrors: Partial<PetFormData> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Pet name is required';
+      newErrors.name = t('onboarding.name_required_error');
     }
 
     if (!formData.species.trim()) {
-      newErrors.species = 'Species is required';
+      newErrors.species = t('onboarding.species_required_error');
     }
 
     if (!formData.weight || isNaN(parseFloat(formData.weight))) {
-      newErrors.weight = 'Please enter a valid weight';
+      newErrors.weight = t('onboarding.weight_required_error');
     }
 
     setErrors(newErrors);
@@ -99,7 +102,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
   };
 
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(t('i18n.locale') === 'ru-RU' ? 'ru-RU' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -120,7 +123,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
       colors={Colors.gradient.background as [string, string]}
       style={styles.container}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
@@ -132,19 +135,19 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.emoji}>🐾</Text>
-              <Text style={styles.title}>Tell us about your pet</Text>
+              <Text style={styles.title}>{t('onboarding.tell_about_pet')}</Text>
               <Text style={styles.subtitle}>
-                We'll use this information to provide personalized care recommendations
+                {t('onboarding.personalized_care')}
               </Text>
             </View>
 
             {/* Pet Form */}
             <Card variant="elevated" style={styles.formCard}>
-              <Text style={styles.formTitle}>Pet Information</Text>
+              <Text style={styles.formTitle}>{t('onboarding.pet_information')}</Text>
               
               <Input
-                label="Pet Name *"
-                placeholder="What's your pet's name?"
+                label={t('onboarding.pet_name_required')}
+                placeholder={t('onboarding.pet_name_placeholder')}
                 value={formData.name}
                 onChangeText={(text) => updateFormData('name', text)}
                 error={errors.name}
@@ -155,8 +158,8 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
               />
 
               <Input
-                label="Species *"
-                placeholder="e.g., Dog, Cat, Rabbit, Bird..."
+                label={t('onboarding.species_required')}
+                placeholder={t('onboarding.species_placeholder')}
                 value={formData.species}
                 onChangeText={(text) => updateFormData('species', text)}
                 error={errors.species}
@@ -167,15 +170,17 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
               />
 
               <GenderPicker
-                label="Gender *"
+                label={t('onboarding.gender_required')}
                 value={formData.gender}
                 onValueChange={(gender) => updateFormData('gender', gender)}
                 error={errors.gender}
+                maleLabel={t('common.male')}
+                femaleLabel={t('common.female')}
               />
 
               <Input
-                label="Breed (Optional)"
-                placeholder="e.g., Golden Retriever, Persian..."
+                label={t('onboarding.breed_optional')}
+                placeholder={t('onboarding.breed_placeholder')}
                 value={formData.breed}
                 onChangeText={(text) => updateFormData('breed', text)}
                 error={errors.breed}
@@ -187,7 +192,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
 
               {/* Birthdate Picker */}
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Birthdate *</Text>
+                <Text style={styles.inputLabel}>{t('onboarding.birthdate_required')}</Text>
                 <TouchableOpacity
                   style={styles.datePickerButton}
                   onPress={() => setShowDatePicker(true)}
@@ -210,8 +215,8 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
               />
 
               <Input
-                label="Weight (kg) *"
-                placeholder="Enter weight in kilograms"
+                label={t('onboarding.weight_required')}
+                placeholder={t('onboarding.weight_placeholder')}
                 value={formData.weight}
                 onChangeText={(text) => updateFormData('weight', text)}
                 error={errors.weight}
@@ -222,8 +227,8 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
               />
 
               <Input
-                label="Notes (Optional)"
-                placeholder="Any special notes about your pet..."
+                label={t('onboarding.notes_optional')}
+                placeholder={t('onboarding.notes_placeholder')}
                 value={formData.notes}
                 onChangeText={(text) => updateFormData('notes', text)}
                 error={errors.notes}
@@ -235,7 +240,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
               />
 
               <Button
-                title="Save Pet Information"
+                title={t('onboarding.save_pet')}
                 onPress={handleSavePet}
                 loading={isLoading}
                 size="large"

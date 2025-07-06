@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-gesture-handler';
 
+import './src/i18n'; // Initialize i18n
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { ExtensionModal } from './src/components/ExtensionModal';
 import { useExtensionModal } from './src/hooks/useExtensionModal';

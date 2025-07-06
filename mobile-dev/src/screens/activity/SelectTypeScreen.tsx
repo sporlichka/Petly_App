@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
 import { ActivityStackParamList, ActivityCategory } from '../../types';
 import { Colors } from '../../constants/Colors';
@@ -26,6 +27,7 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
   navigation,
   route,
 }) => {
+  const { t } = useTranslation();
   const { petId, editActivity, preselectedDate, fromScreen } = route.params;
   const isEditMode = !!editActivity;
 
@@ -60,22 +62,22 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
     {
       category: 'FEEDING' as ActivityCategory,
       emoji: '🥣',
-      title: 'Feeding',
-      description: 'Track meals, treats, and feeding schedules',
+      title: t('activity.feeding'),
+      description: t('activity.feeding_description'),
       color: Colors.feeding,
     },
     {
       category: 'HEALTH' as ActivityCategory,
       emoji: '🩺',
-      title: 'Health',
-      description: 'Record vet visits, medications, and symptoms',
+      title: t('activity.health'),
+      description: t('activity.health_description'),
       color: Colors.health,
     },
     {
       category: 'ACTIVITY' as ActivityCategory,
       emoji: '🎾',
-      title: 'Activity',
-      description: 'Log exercises, walks, and playtime',
+      title: t('activity.activity'),
+      description: t('activity.activity_description'),
       color: Colors.activity,
     },
   ];
@@ -117,7 +119,7 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
         <SafeAreaView style={styles.safeArea} edges={['bottom']}>
           <View style={styles.content}>
             <View style={styles.header}>
-              <Text style={styles.title}>Loading activity...</Text>
+              <Text style={styles.title}>{t('activity.loading_activity')}</Text>
             </View>
           </View>
         </SafeAreaView>
@@ -138,9 +140,9 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
         >
           <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>What type of activity?</Text>
+            <Text style={styles.title}>{t('activity.what_type_activity')}</Text>
             <Text style={styles.subtitle}>
-              Choose the category that best describes this activity
+              {t('activity.choose_category')}
             </Text>
           </View>
 
@@ -172,7 +174,7 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
           </View>
 
           <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>Step 1 of 5</Text>
+            <Text style={styles.progressText}>{t('activity.step_of', { current: 1, total: 5 })}</Text>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: '20%' }]} />
             </View>

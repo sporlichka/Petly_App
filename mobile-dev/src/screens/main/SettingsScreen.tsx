@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-
+import { useTranslation } from 'react-i18next';
 import { User } from '../../types';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -19,6 +19,7 @@ import { apiService } from '../../services/api';
 import { notificationService } from '../../services/notificationService';
 import { useActivityNotifications } from '../../hooks/useActivityNotifications';
 import { backgroundTaskService } from '../../services/backgroundTaskService';
+import { LanguageModal } from '../../components/LanguageModal';
 
 interface SettingsScreenProps {
   onLogout: () => void;
@@ -38,8 +39,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   });
   const [passwordErrors, setPasswordErrors] = useState<{[key: string]: string}>({});
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  
+  const { t, i18n } = useTranslation();
   const { getAllScheduledCount } = useActivityNotifications();
+
+  const currentLanguage = i18n.language;
 
   useEffect(() => {
     loadUserInfo();
@@ -83,6 +89,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
     } catch (error) {
       console.error('Failed to load background task status:', error);
       setBackgroundTaskStatus('Error');
+    }
+  };
+
+  const handleChangeLanguage = (language: string) => {
+    i18n.changeLanguage(language);
+    setShowLanguageModal(false);
+  };
+
+  const getLanguageDisplayName = (lang: string) => {
+    switch (lang) {
+      case 'en-US':
+      case 'en':
+        return t('settings.english');
+      case 'ru-RU':
+      case 'ru':
+        return t('settings.russian');
+      default:
+        return t('settings.english');
     }
   };
 
@@ -291,8 +315,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
     );
   };
 
+  const handleLanguageChange = (lang: string) => {
+    i18n.changeLanguage(lang);
+    setLanguageModalVisible(false);
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={[]}>
+    <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <LanguageModal
+        visible={languageModalVisible}
+        onClose={() => setLanguageModalVisible(false)}
+        currentLanguage={i18n.language}
+        onSelectLanguage={handleLanguageChange}
+        title={t('auth.language')}
+        cancelLabel={t('common.cancel')}
+      />
       <ScrollView 
         style={styles.content} 
         contentContainerStyle={styles.scrollContent}
@@ -313,108 +350,55 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
 
         {/* Notifications Section */}
         <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
+          <Text style={styles.sectionTitle}>{t('settings.notifications')}</Text>
           
-          <Card style={styles.settingCard}>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons 
-                  name={notificationEnabled ? "notifications" : "notifications-off"} 
-                  size={24} 
-                  color={notificationEnabled ? Colors.success : Colors.textSecondary} 
-                />
-                <View style={styles.notificationInfo}>
-                  <Text style={styles.settingText}>
-                    {notificationEnabled ? 'Notifications Enabled' : 'Notifications Disabled'}
-                  </Text>
-                  {notificationEnabled && (
+          {notificationEnabled && (
+            <Card style={styles.settingCard} onPress={handleDisableAllNotifications}>
+              <View style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="notifications-off-outline" size={24} color={Colors.error} />
+                  <View style={styles.notificationInfo}>
+                    <Text style={[styles.settingText, { color: Colors.error }]}>{t('settings.disable_all_notifications')}</Text>
                     <Text style={styles.notificationSubtext}>
-                      {scheduledCount} reminder{scheduledCount !== 1 ? 's' : ''} scheduled
+                      {t('settings.reminders_scheduled', { count: scheduledCount })}
                     </Text>
-                  )}
+                  </View>
                 </View>
+                <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
               </View>
-              <View style={[
-                styles.statusIndicator,
-                { backgroundColor: notificationEnabled ? Colors.success : Colors.textSecondary }
-              ]} />
-            </View>
-          </Card>
-
+            </Card>
+          )}
           {!notificationEnabled && (
             <Button
-              title="Enable Notifications"
+              title={t('settings.enable_notifications')}
               onPress={handleRequestNotificationPermission}
               variant="outline"
               style={styles.enableButton}
             />
           )}
-
-          {notificationEnabled && (
-            <Button
-              title="🚫 Disable All Notifications"
-              onPress={handleDisableAllNotifications}
-              loading={isLoading}
-              variant="outline" 
-              style={styles.disableButton}
-              textStyle={styles.disableButtonText}
-            />
-          )}
         </View>
 
-        {/* Background Tasks Section */}
+        {/* Language Section */}
         <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>Background Tasks</Text>
+          <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
           
-          <Card style={styles.settingCard}>
+          <Card style={styles.settingCard} onPress={() => setShowLanguageModal(true)}>
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
-                <Ionicons 
-                  name="sync-outline" 
-                  size={24} 
-                  color={Colors.primary} 
-                />
+                <Ionicons name="language-outline" size={24} color={Colors.primary} />
                 <View style={styles.notificationInfo}>
-                  <Text style={styles.settingText}>
-                    Background Sync
-                  </Text>
-                  <Text style={styles.notificationSubtext}>
-                    Status: {backgroundTaskStatus}
-                  </Text>
+                  <Text style={styles.settingText}>{t('settings.change_language')}</Text>
+                  <Text style={styles.notificationSubtext}>{getLanguageDisplayName(currentLanguage)}</Text>
                 </View>
               </View>
-              <View style={[
-                styles.statusIndicator,
-                { backgroundColor: backgroundTaskStatus === 'Available' ? Colors.success : Colors.textSecondary }
-              ]} />
-            </View>
-          </Card>
-
-          <Card style={styles.settingCard}>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons 
-                  name="time-outline" 
-                  size={24} 
-                  color={Colors.primary} 
-                />
-                <View style={styles.notificationInfo}>
-                  <Text style={styles.settingText}>
-                    Missed Notifications Check
-                  </Text>
-                  <Text style={styles.notificationSubtext}>
-                    Automatically reschedules missed reminders
-                  </Text>
-                </View>
-              </View>
-              <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+              <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
             </View>
           </Card>
         </View>
 
         {/* Settings Options */}
         <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
           
           <Card
             style={styles.settingCard}
@@ -423,7 +407,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <Ionicons name="lock-closed-outline" size={24} color={Colors.textSecondary} />
-                <Text style={styles.settingText}>Change Password</Text>
+                <Text style={styles.settingText}>{t('settings.change_password')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
             </View>
@@ -436,23 +420,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <Ionicons name="trash-outline" size={24} color={Colors.error} />
-                <Text style={[styles.settingText, { color: Colors.error }]}>Delete Profile</Text>
+                <Text style={[styles.settingText, { color: Colors.error }]}>{t('settings.delete_profile')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
             </View>
           </Card>
-        </View>
 
-        {/* Logout Button */}
-        <View style={styles.logoutContainer}>
-          <Button
-            title="Logout"
+          <Card
+            style={styles.settingCard}
             onPress={handleLogout}
-            loading={isLoading}
-            variant="outline"
-            style={styles.logoutButton}
-            textStyle={styles.logoutText}
-          />
+          >
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="log-out-outline" size={24} color={Colors.error} />
+                <Text style={[styles.settingText, { color: Colors.error }]}>{t('settings.logout')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
+            </View>
+          </Card>
         </View>
 
         {/* App Info */}
@@ -525,6 +510,41 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
               />
             </ScrollView>
           </SafeAreaView>
+        </Modal>
+
+        {/* Language Selection Modal */}
+        <Modal
+          visible={showLanguageModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowLanguageModal(false)}
+        >
+          <View style={styles.languageModalOverlay}>
+            <View style={styles.languageModalContent}>
+              <Text style={styles.languageModalTitle}>{t('settings.select_language')}</Text>
+              
+              <Button
+                title={t('settings.english')}
+                onPress={() => handleChangeLanguage('en-US')}
+                style={styles.languageButton}
+                variant={currentLanguage.startsWith('en') ? 'primary' : 'outline'}
+              />
+              
+              <Button
+                title={t('settings.russian')}
+                onPress={() => handleChangeLanguage('ru-RU')}
+                style={styles.languageButton}
+                variant={currentLanguage.startsWith('ru') ? 'primary' : 'outline'}
+              />
+              
+              <Button
+                title={t('common.cancel')}
+                onPress={() => setShowLanguageModal(false)}
+                variant="outline"
+                style={styles.languageButton}
+              />
+            </View>
+          </View>
         </Modal>
       </ScrollView>
     </SafeAreaView>
@@ -682,5 +702,28 @@ const styles = StyleSheet.create({
   },
   changePasswordButton: {
     marginTop: 24,
+  },
+  languageModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  languageModalContent: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 24,
+    minWidth: 280,
+    maxWidth: 320,
+  },
+  languageModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  languageButton: {
+    marginBottom: 12,
   },
 }); 

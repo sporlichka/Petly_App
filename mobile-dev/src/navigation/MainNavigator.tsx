@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MainTabParamList } from '../types';
 import { Colors } from '../constants/Colors';
+import { useTranslation } from 'react-i18next';
 
 import { HomeStackNavigator } from './HomeStackNavigator';
 import { CalendarScreen } from '../screens/main/CalendarScreen';
@@ -18,6 +19,7 @@ interface MainNavigatorProps {
 
 export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   
   return (
     <Tab.Navigator
@@ -56,25 +58,14 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
           fontSize: 12,
           fontWeight: '500',
         },
-        headerStyle: {
-          backgroundColor: Colors.surface,
-          borderBottomColor: Colors.borderLight,
-          borderBottomWidth: 1,
-        },
-        headerTitleStyle: {
-          color: Colors.text,
-          fontSize: 18,
-          fontWeight: '600',
-        },
-        headerTintColor: Colors.primary,
+        headerShown: false,
       })}
     >
       <Tab.Screen 
         name="Home" 
         component={HomeStackNavigator}
         options={{
-          title: 'My Pets',
-          headerTitle: '🐾 My Pets',
+          tabBarLabel: t('home.title'),
         }}
         listeners={({ navigation }) => ({
           state: (e) => {
@@ -86,7 +77,6 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
             if (homeState && homeState.index !== undefined && homeState.index > 0) {
               navigation.setOptions({
                 tabBarStyle: { display: 'none' },
-                headerShown: false,
               });
             } else {
               navigation.setOptions({
@@ -98,7 +88,6 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
                   paddingTop: 5,
                   height: 60 + Math.max(insets.bottom - 5, 0),
                 },
-                headerShown: true,
               });
             }
           },
@@ -107,8 +96,7 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
       <Tab.Screen 
         name="Calendar"
         options={{
-          title: 'Activities',
-          headerTitle: '📅 Activities',
+          tabBarLabel: t('calendar.title'),
         }}
       >
         {(props) => <CalendarScreen {...props} />}
@@ -117,15 +105,13 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
         name="Chat" 
         component={ChatScreen}
         options={{
-          title: 'Vet Chat',
-          headerShown: false,
+          tabBarLabel: t('common.vetly_ai_assistant'),
         }}
       />
       <Tab.Screen 
         name="Settings"
         options={{
-          title: 'Settings',
-          headerTitle: '⚙️ Settings',
+          tabBarLabel: t('settings.title'),
         }}
       >
         {(props) => (

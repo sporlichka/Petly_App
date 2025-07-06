@@ -8,6 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
 import { OnboardingStackParamList } from '../../types';
 import { Button } from '../../components/Button';
@@ -21,6 +22,8 @@ interface SuccessScreenProps {
 }
 
 export const SuccessScreen: React.FC<SuccessScreenProps> = ({ onComplete }) => {
+  const { t, i18n } = useTranslation();
+
   const handleContinue = () => {
     onComplete();
   };
@@ -46,48 +49,47 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({ onComplete }) => {
 
           {/* Success Content */}
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Perfect! 🌟</Text>
+            <Text style={styles.title}>{t('onboarding.success_title')}</Text>
             <Text style={styles.subtitle}>
-              Your pet has been added successfully
+              {t('onboarding.success_subtitle')}
             </Text>
             <Text style={styles.description}>
-              You're all set to start tracking your pet's health, activities, and happiness. 
-              Our AI assistant is ready to help you!
+              {t('onboarding.success_description')}
             </Text>
           </View>
 
           {/* Features Preview */}
           <View style={styles.featuresContainer}>
-            <Text style={styles.featuresTitle}>What you can do now:</Text>
+            <Text style={styles.featuresTitle}>{t('onboarding.what_you_can_do')}</Text>
             
             <View style={styles.feature}>
               <Text style={styles.featureEmoji}>📱</Text>
-              <Text style={styles.featureText}>Add daily activities and feeding schedules</Text>
+              <Text style={styles.featureText}>{t('onboarding.feature_add_activities')}</Text>
             </View>
             <View style={styles.feature}>
               <Text style={styles.featureEmoji}>📅</Text>
-              <Text style={styles.featureText}>View activity calendar and history</Text>
+              <Text style={styles.featureText}>{t('onboarding.feature_view_calendar')}</Text>
             </View>
             <View style={styles.feature}>
               <Text style={styles.featureEmoji}>🤖</Text>
-              <Text style={styles.featureText}>Chat with our AI vet assistant</Text>
+              <Text style={styles.featureText}>{t('onboarding.feature_chat_ai')}</Text>
             </View>
             <View style={styles.feature}>
               <Text style={styles.featureEmoji}>🔔</Text>
-              <Text style={styles.featureText}>Set reminders for important activities</Text>
+              <Text style={styles.featureText}>{t('onboarding.feature_set_reminders')}</Text>
             </View>
           </View>
 
           {/* CTA Section */}
           <View style={styles.ctaContainer}>
             <Button
-              title="Start Tracking Activities!"
+              title={t('onboarding.start_tracking')}
               onPress={handleContinue}
               size="large"
               style={styles.ctaButton}
             />
             <Text style={styles.ctaSubtext}>
-              Ready to give your pet the best care? Let's go! 🚀
+              {t('onboarding.ready_to_care')}
             </Text>
           </View>
         </View>

@@ -17,23 +17,17 @@ import Markdown from 'react-native-markdown-display';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
 import { ChatMessage, ChatSession } from '../../types';
-
-const SUGGESTION_CHIPS = [
-  "My cat is not eating",
-  "How often should I walk my dog?",
-  "My pet seems lethargic",
-  "What vaccines does my pet need?",
-  "How to introduce a new pet?",
-  "My pet is drinking too much water",
-];
+import { useTranslation } from 'react-i18next';
 
 export const ChatScreen: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [sessionId, setSessionId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const flatListRef = useRef<FlatList>(null);
+  const suggestionChips = t('chat.suggestions', { returnObjects: true }) as string[];
 
   useEffect(() => {
     initializeChat();
@@ -62,7 +56,7 @@ export const ChatScreen: React.FC = () => {
         // Add welcome message for new chat
         const welcomeMessage: ChatMessage = {
           id: 'welcome',
-          content: "Hello! I'm your Vetly AI Assistant 🐾\n\nI'm here to help you with questions about your pet's health, behavior, and care. How can I help you today?",
+          content: t('chat.ai_welcome'),
           isUser: false,
           timestamp: new Date().toISOString(),
         };
@@ -70,7 +64,7 @@ export const ChatScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to initialize chat:', error);
-      Alert.alert('Error', 'Failed to load chat history');
+      Alert.alert(t('chat.error_loading_chat_history'));
     } finally {
       setIsLoadingHistory(false);
     }
@@ -122,7 +116,7 @@ export const ChatScreen: React.FC = () => {
 
     } catch (error) {
       console.error('Failed to send message:', error);
-      Alert.alert('Error', 'Failed to send message. Please try again.');
+      Alert.alert(t('chat.error_sending_message'));
       
       // Remove the user message on error
       setMessages(prev => prev.filter(msg => msg.id !== userMessage.id));
@@ -137,12 +131,12 @@ export const ChatScreen: React.FC = () => {
 
   const clearChat = () => {
     Alert.alert(
-      'Clear Chat',
-      'Are you sure you want to clear the chat history?',
+      t('chat.clear_chat'),
+      t('chat.clear_chat_confirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('chat.cancel'), style: 'cancel' },
         {
-          text: 'Clear',
+          text: t('chat.clear'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -154,7 +148,7 @@ export const ChatScreen: React.FC = () => {
               await initializeChat();
             } catch (error) {
               console.error('Failed to clear chat:', error);
-              Alert.alert('Error', 'Failed to clear chat');
+              Alert.alert(t('chat.error_clear_chat'));
             }
           },
         },
@@ -194,7 +188,7 @@ export const ChatScreen: React.FC = () => {
             styles.timestamp,
             item.isUser ? styles.userTimestamp : styles.aiTimestamp
           ]}>
-            {new Date(item.timestamp).toLocaleTimeString([], { 
+            {new Date(item.timestamp).toLocaleTimeString(i18n.language, { 
               hour: '2-digit', 
               minute: '2-digit' 
             })}
@@ -217,7 +211,7 @@ export const ChatScreen: React.FC = () => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.suggestionsContent}
       >
-        {SUGGESTION_CHIPS.map((suggestion, index) => (
+        {suggestionChips.map((suggestion, index) => (
           <TouchableOpacity
             key={index}
             style={styles.suggestionChip}
@@ -234,7 +228,7 @@ export const ChatScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading chat...</Text>
+          <Text style={styles.loadingText}>{t('chat.loading_chat')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -249,13 +243,13 @@ export const ChatScreen: React.FC = () => {
             <Text style={styles.headerAvatarText}>🤖</Text>
           </View>
           <View>
-            <Text style={styles.headerTitle}>Vetly AI Assistant</Text>
-            <Text style={styles.headerSubtitle}>AI Veterinary Assistant</Text>
+            <Text style={styles.headerTitle}>{t('chat.title')}</Text>
+            <Text style={styles.headerSubtitle}>{t('chat.subtitle')}</Text>
           </View>
         </View>
         
         <TouchableOpacity onPress={clearChat} style={styles.clearButton}>
-          <Text style={styles.clearButtonText}>Clear</Text>
+          <Text style={styles.clearButtonText}>{t('chat.clear')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -286,7 +280,7 @@ export const ChatScreen: React.FC = () => {
               style={styles.textInput}
               value={currentMessage}
               onChangeText={setCurrentMessage}
-              placeholder="Ask about your pet's health..."
+              placeholder={t('chat.placeholder')}
               placeholderTextColor={Colors.textSecondary}
               multiline
               maxLength={1000}

@@ -12,6 +12,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { HomeStackParamList, Pet, ActivityRecord } from '../../types';
 import { Button } from '../../components/Button';
@@ -31,6 +32,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
   navigation,
   route,
 }) => {
+  const { t, i18n } = useTranslation();
   const { petId } = route.params;
   const [pet, setPet] = useState<Pet | null>(null);
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
@@ -86,15 +88,15 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
     
     if (ageInYears < 1) {
       const ageInMonths = Math.floor(ageInMs / (1000 * 60 * 60 * 24 * 30.44));
-      return `${ageInMonths} month${ageInMonths !== 1 ? 's' : ''} old`;
+      return t('pets.age_months', { count: ageInMonths });
     }
     
-    return `${ageInYears} year${ageInYears !== 1 ? 's' : ''} old`;
+    return t('pets.age_years', { count: ageInYears });
   };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(i18n.language, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -146,31 +148,31 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
       
       // Handle negative differences (future dates)
       if (diffInMs < 0) {
-        return 'Future';
+        return t('common.future');
       }
       
       // Less than 1 minute
       if (diffInMinutes < 1) {
-        return 'Just now';
+        return t('common.just_now');
       }
       
       // Less than 60 minutes
       if (diffInMinutes < 60) {
-        return `${diffInMinutes} min ago`;
+        return t('common.minutes_ago', { count: diffInMinutes });
       }
       
       // Less than 24 hours
       if (diffInHours < 24) {
-        return `${diffInHours}h ago`;
+        return t('common.hours_ago', { count: diffInHours });
       }
       
       // Less than 48 hours
       if (diffInHours < 48) {
-        return 'Yesterday';
+        return t('common.yesterday');
       }
       
       // Older activities
-      return date.toLocaleDateString('en-US', {
+      return date.toLocaleDateString(i18n.language, {
         month: 'short',
         day: 'numeric',
       });
@@ -219,12 +221,12 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
 
   const handleDeletePet = () => {
     Alert.alert(
-      'Delete Pet',
-      `Are you sure you want to delete ${pet?.name}? This action cannot be undone.`,
+      t('pets.delete_pet'),
+      t('pets.delete_pet_confirm', { name: pet?.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: confirmDeletePet,
         },
@@ -238,11 +240,18 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
     setIsDeleting(true);
     try {
       await apiService.deletePet(pet.id);
-      Alert.alert('Success', `${pet.name} has been deleted.`, [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      Alert.alert(
+        t('pets.pet_deleted'),
+        t('pets.pet_deleted_message', { name: pet.name }),
+        [
+          {
+            text: t('common.ok'),
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
     } catch (error) {
-      Alert.alert('Error', 'Failed to delete pet. Please try again.');
+      Alert.alert(t('common.error'), t('pets.error_deleting_pet'));
     } finally {
       setIsDeleting(false);
     }
@@ -310,9 +319,9 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
       return (
         <View style={styles.emptyActivities}>
           <Text style={styles.emptyText}>📝</Text>
-          <Text style={styles.emptyTitle}>No activities yet</Text>
+          <Text style={styles.emptyTitle}>{t('activities.noActivitiesYetShort')}</Text>
           <Text style={styles.emptySubtitle}>
-            Start tracking {pet?.name}'s daily activities
+            {t('activities.startTrackingPet', { name: pet?.name })}
           </Text>
         </View>
       );
@@ -337,7 +346,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading pet details... 🐾</Text>
+          <Text style={styles.loadingText}>{t('pets.loading_details')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -347,10 +356,10 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Pet not found</Text>
-          <Text style={styles.errorText}>This pet may have been deleted.</Text>
+          <Text style={styles.errorTitle}>{t('pets.pet_not_found')}</Text>
+          <Text style={styles.errorText}>{t('pets.pet_deleted')}</Text>
           <Button
-            title="Go Back"
+            title={t('common.goBack')}
             onPress={() => navigation.goBack()}
             style={styles.goBackButton}
           />
@@ -374,7 +383,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
             <View style={styles.petMainInfo}>
               <Text style={styles.petName}>{pet.name}</Text>
               <Text style={styles.petSpecies}>
-                {pet.gender} {pet.species}
+                {t('pets.gender_' + pet.gender.toLowerCase())} {pet.species}
               </Text>
               {pet.breed && (
                 <Text style={styles.petBreed}>{pet.breed}</Text>
@@ -386,12 +395,12 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
 
         {/* Pet Details */}
         <Card variant="default" style={styles.detailsCard}>
-          <Text style={styles.sectionTitle}>Details</Text>
+          <Text style={styles.sectionTitle}>{t('pets.details')}</Text>
           
           <View style={styles.detailRow}>
             <Ionicons name="calendar-outline" size={20} color={Colors.textSecondary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Birthday</Text>
+              <Text style={styles.detailLabel}>{t('pets.birthday')}</Text>
               <Text style={styles.detailValue}>{formatDate(pet.birthdate)}</Text>
             </View>
           </View>
@@ -399,16 +408,16 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
           <View style={styles.detailRow}>
             <Ionicons name="scale-outline" size={20} color={Colors.textSecondary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Weight</Text>
-              <Text style={styles.detailValue}>{pet.weight} kg</Text>
+              <Text style={styles.detailLabel}>{t('pets.weight')}</Text>
+              <Text style={styles.detailValue}>{t('pets.weight_kg', { weight: pet.weight })}</Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
             <Ionicons name="transgender-outline" size={20} color={Colors.textSecondary} />
             <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Gender</Text>
-              <Text style={styles.detailValue}>{pet.gender}</Text>
+              <Text style={styles.detailLabel}>{t('pets.gender')}</Text>
+              <Text style={styles.detailValue}>{t('pets.gender_' + pet.gender.toLowerCase())}</Text>
             </View>
           </View>
 
@@ -416,7 +425,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
             <View style={styles.detailRow}>
               <Ionicons name="document-text-outline" size={20} color={Colors.textSecondary} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Notes</Text>
+                <Text style={styles.detailLabel}>{t('pets.notes')}</Text>
                 <Text style={styles.detailValue}>{pet.notes}</Text>
               </View>
             </View>
@@ -425,7 +434,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
 
         {/* Add Activity Button */}
         <Button
-          title="➕ Add Activity"
+          title={t('pets.add_activity')}
           onPress={handleAddActivity}
           size="large"
           style={styles.addActivityButton}
@@ -433,20 +442,20 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
 
         {/* Recent Activities */}
         <Card variant="default" style={styles.activitiesCard}>
-          <Text style={styles.sectionTitle}>Recent Activities</Text>
+          <Text style={styles.sectionTitle}>{t('pets.recent_activities')}</Text>
           {renderActivitiesSection()}
         </Card>
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <Button
-            title="✏️ Edit"
+            title={t('common.edit')}
             onPress={handleEditPet}
             variant="outline"
             style={styles.actionButton}
           />
           <Button
-            title="🗑 Delete"
+            title={t('common.delete')}
             onPress={handleDeletePet}
             variant="outline"
             loading={isDeleting}

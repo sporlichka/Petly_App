@@ -14,6 +14,7 @@ import { RouteProp } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
 import { HomeStackParamList, ActivityRecord, Pet } from '../../types';
 import { Button } from '../../components/Button';
@@ -34,6 +35,7 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
   navigation,
   route,
 }) => {
+  const { t, i18n } = useTranslation();
   const { petId } = route.params;
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [pet, setPet] = useState<Pet | null>(null);
@@ -129,15 +131,15 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
 
   const handleDeleteActivity = (activity: ActivityRecord) => {
     Alert.alert(
-      'Delete Activity',
-      `Are you sure you want to delete "${activity.title}"?`,
+      t('activities.delete_activity'),
+      t('activities.delete_activity_confirm', { title: activity.title }),
       [
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => confirmDeleteActivity(activity.id),
         },
@@ -161,10 +163,10 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
       // Delete the activity from the backend
       await apiService.deleteActivityRecord(activityId);
       await loadActivities(); // Refresh the list
-      Alert.alert('Success', 'Activity deleted successfully');
+      Alert.alert(t('common.success'), t('activities.activityDeletedSuccessfully'));
     } catch (error) {
       console.error('Failed to delete activity:', error);
-      Alert.alert('Error', 'Failed to delete activity. Please try again.');
+      Alert.alert(t('common.error'), t('activities.errorDeletingActivity'));
     } finally {
       setDeletingActivityId(null);
     }
@@ -259,23 +261,23 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
 
     let dateStr;
     if (activityDateOnly.getTime() === today.getTime()) {
-      dateStr = 'Today';
+      dateStr = t('common.today');
     } else if (activityDateOnly.getTime() === yesterday.getTime()) {
-      dateStr = 'Yesterday';
+      dateStr = t('common.yesterday');
     } else {
-      dateStr = activityDate.toLocaleDateString('en-US', {
+      dateStr = activityDate.toLocaleDateString(i18n.language, {
         month: 'short',
         day: 'numeric',
       });
     }
 
-    const timeStr = activityDate.toLocaleTimeString('en-US', {
+    const timeStr = activityDate.toLocaleTimeString(i18n.language, {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
     });
 
-    return `${dateStr} at ${timeStr}`;
+    return t('common.date_at_time', { date: dateStr, time: timeStr });
   };
 
   const isNotificationsEnabled = (activity: ActivityRecord): boolean => {
@@ -313,13 +315,13 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
               
               {item.repeat && (
                 <Text style={styles.activityRepeat}>
-                  🔄 Repeats {item.repeat}
+                  {t('activities.repeats')} {item.repeat}
                 </Text>
               )}
               
               {hasScheduledNotification && (
                 <Text style={styles.notificationScheduled}>
-                  🔔 Reminder scheduled
+                  {t('activities.reminder_scheduled')}
                 </Text>
               )}
             </View>
@@ -340,7 +342,7 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
             onPress={() => handleEditActivity(item)}
           >
             <Ionicons name="create-outline" size={16} color={Colors.primary} />
-            <Text style={styles.editButtonText}>Edit</Text>
+            <Text style={styles.editButtonText}>{t('common.edit')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -356,7 +358,7 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
               styles.notificationButtonText,
               { color: notificationsEnabled ? Colors.success : Colors.textSecondary }
             ]}>
-              {notificationsEnabled ? 'On' : 'Off'}
+              {notificationsEnabled ? t('common.on') : t('common.off')}
             </Text>
           </TouchableOpacity>
 
@@ -371,7 +373,7 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
               color={Colors.error} 
             />
             <Text style={styles.deleteButtonText}>
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? t('common.deleting') : t('common.delete')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -382,12 +384,12 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Text style={styles.emptyIcon}>📝</Text>
-      <Text style={styles.emptyTitle}>No Activities Yet</Text>
+      <Text style={styles.emptyTitle}>{t('activities.noActivitiesYet')}</Text>
       <Text style={styles.emptySubtitle}>
-        Start tracking {pet?.name}'s daily activities
+        {t('activities.startTracking', { name: pet?.name })}
       </Text>
       <Button
-        title="Add First Activity"
+        title={t('activities.addFirstActivity')}
         onPress={handleAddActivity}
         style={styles.addFirstButton}
       />
@@ -398,7 +400,7 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading activities... 📝</Text>
+          <Text style={styles.loadingText}>{t('activities.loadingActivities')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -412,10 +414,10 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>
-            {pet?.name}'s Activities
+            {pet?.name} {t('activities.activities')}
           </Text>
           <Text style={styles.headerSubtitle}>
-            {activities.length} total activities
+            {t('activities.totalActivities', { count: activities.length })}
           </Text>
         </View>
 

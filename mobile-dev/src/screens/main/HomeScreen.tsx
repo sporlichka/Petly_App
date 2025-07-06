@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { Pet, HomeStackParamList } from '../../types';
 import { PetCard } from '../../components/Card';
@@ -25,6 +26,7 @@ interface HomeScreenProps {
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+  const { t } = useTranslation();
   const [pets, setPets] = useState<Pet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -53,26 +55,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       if (errorMessage.includes('Authentication expired')) {
         Alert.alert(
-          'Session Expired',
-          'Your session has expired. Please log in again.',
-          [{ text: 'OK' }]
+          t('home.session_expired'),
+          t('home.session_expired_message'),
+          [{ text: t('common.ok') }]
         );
       } else if (errorMessage.includes('Network error')) {
         Alert.alert(
-          'Connection Error',
-          'Unable to connect to the server. Please check your internet connection and try again.',
+          t('home.connection_error'),
+          t('home.connection_error_message'),
           [
-            { text: 'Cancel' },
-            { text: 'Retry', onPress: () => loadPets() }
+            { text: t('home.cancel') },
+            { text: t('home.retry'), onPress: () => loadPets() }
           ]
         );
       } else {
         Alert.alert(
-          'Error',
-          'Failed to load pets. Please try again.',
+          t('home.load_pets_error'),
+          t('home.load_pets_error_message'),
           [
-            { text: 'Cancel' },
-            { text: 'Retry', onPress: () => loadPets() }
+            { text: t('home.cancel') },
+            { text: t('home.retry'), onPress: () => loadPets() }
           ]
         );
       }
@@ -104,10 +106,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     
     if (ageInYears < 1) {
       const ageInMonths = Math.floor(ageInMs / (1000 * 60 * 60 * 24 * 30.44));
-      return `${ageInMonths} month${ageInMonths !== 1 ? 's' : ''} old`;
+      return t('pets.age_months', { count: ageInMonths });
     }
     
-    return `${ageInYears} year${ageInYears !== 1 ? 's' : ''} old`;
+    return t('pets.age_years', { count: ageInYears });
   };
 
   const renderPetCard = ({ item: pet }: { item: Pet }) => (
@@ -143,7 +145,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="scale-outline" size={16} color={Colors.textSecondary} />
-            <Text style={styles.detailText}>{pet.weight} kg</Text>
+            <Text style={styles.detailText}>{t('pets.weight_kg', { weight: pet.weight })}</Text>
           </View>
         </View>
 
@@ -159,12 +161,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Text style={styles.emptyEmoji}>🐾</Text>
-      <Text style={styles.emptyTitle}>No pets yet</Text>
+      <Text style={styles.emptyTitle}>{t('home.no_pets')}</Text>
       <Text style={styles.emptyDescription}>
-        Add your first pet to start tracking their activities and health!
+        {t('home.add_first_pet')}
       </Text>
       <Button
-        title="Add Your First Pet"
+        title={t('home.add_first_pet_button')}
         onPress={() => {
           navigation.navigate('AddPet');
         }}
@@ -175,20 +177,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.loadingContainer} edges={['bottom']}>
-        <Text style={styles.loadingText}>Loading your pets... 🐾</Text>
+      <SafeAreaView style={styles.loadingContainer} edges={['top','bottom']}>
+        <Text style={styles.loadingText}>{t('home.loading_pets')}</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top','bottom']}>
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>Welcome back! 👋</Text>
+        <Text style={styles.welcomeText}>{t('home.welcome_back')}</Text>
         <Text style={styles.subtitle}>
           {pets.length > 0 
-            ? `You have ${pets.length} ${pets.length === 1 ? 'pet' : 'pets'} to care for`
-            : 'Ready to add your first pet?'
+            ? t('home.pets_to_care_for', { count: pets.length })
+            : t('home.ready_to_add_pet')
           }
         </Text>
       </View>
@@ -213,7 +215,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       {pets.length > 0 && (
         <View style={styles.fab}>
           <Button
-            title="+ Add Pet"
+            title={t('home.add_pet')}
             onPress={() => {
               navigation.navigate('AddPet');
             }}

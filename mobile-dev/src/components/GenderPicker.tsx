@@ -9,6 +9,8 @@ interface GenderPickerProps {
   value: PetGender;
   onValueChange: (gender: PetGender) => void;
   error?: string;
+  maleLabel: string;
+  femaleLabel: string;
 }
 
 export const GenderPicker: React.FC<GenderPickerProps> = ({
@@ -16,10 +18,12 @@ export const GenderPicker: React.FC<GenderPickerProps> = ({
   value,
   onValueChange,
   error,
+  maleLabel,
+  femaleLabel,
 }) => {
   const options: { value: PetGender; label: string; icon: string; emoji: string }[] = [
-    { value: 'Male', label: 'Male', icon: 'male', emoji: '♂️' },
-    { value: 'Female', label: 'Female', icon: 'female', emoji: '♀️' },
+    { value: 'Male', label: maleLabel, icon: 'male', emoji: '♂️' },
+    { value: 'Female', label: femaleLabel, icon: 'female', emoji: '♀️' },
   ];
 
   return (

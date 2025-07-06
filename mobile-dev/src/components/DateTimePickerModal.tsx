@@ -114,7 +114,7 @@ export const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
 
   const generateMinutes = () => {
     const minutes = [];
-    for (let minute = 0; minute < 60; minute += 5) { // 5-minute intervals
+    for (let minute = 0; minute < 60; minute++) {
       minutes.push(minute);
     }
     return minutes;
@@ -127,20 +127,15 @@ export const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
 
   const handleConfirm = () => {
     let newDate: Date;
-    
     if (mode === 'date') {
-      newDate = new Date(selectedYear, selectedMonth, selectedDay);
-      // Preserve time from original date
-      newDate.setHours(value.getHours());
-      newDate.setMinutes(value.getMinutes());
-      newDate.setSeconds(value.getSeconds());
+      newDate = new Date(selectedYear, selectedMonth, selectedDay, value.getHours(), value.getMinutes(), value.getSeconds());
     } else {
+      // Важно: сохраняем дату из value, но меняем только время
       newDate = new Date(value);
       newDate.setHours(selectedHour);
       newDate.setMinutes(selectedMinute);
       newDate.setSeconds(0);
     }
-    
     onConfirm(newDate);
   };
 

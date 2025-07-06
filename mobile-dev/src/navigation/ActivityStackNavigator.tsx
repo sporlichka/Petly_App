@@ -1,5 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { ActivityStackParamList } from '../types';
 import { Colors } from '../constants/Colors';
 
@@ -14,6 +15,8 @@ import {
 const Stack = createStackNavigator<ActivityStackParamList>();
 
 export const ActivityStackNavigator: React.FC = () => {
+  const { t } = useTranslation();
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -35,40 +38,40 @@ export const ActivityStackNavigator: React.FC = () => {
         name="SelectType" 
         component={SelectTypeScreen}
         options={{
-          title: 'Add Activity',
-          headerTitle: '📝 Add Activity',
+          title: t('activity.add_activity'),
+          headerTitle: t('activity.add_activity_header'),
         }}
       />
       <Stack.Screen 
         name="FillDetails" 
         component={FillDetailsScreen}
         options={{
-          title: 'Activity Details',
-          headerTitle: '✏️ Activity Details',
+          title: t('activity.activity_details'),
+          headerTitle: t('activity.activity_details_header'),
         }}
       />
       <Stack.Screen 
         name="SelectDateTime" 
         component={SelectDateTimeScreen}
         options={{
-          title: 'Date & Time',
-          headerTitle: '📅 Date & Time',
+          title: t('activity.date_time'),
+          headerTitle: t('activity.date_time_header'),
         }}
       />
       <Stack.Screen 
         name="SetRepeat" 
         component={SetRepeatScreen}
         options={{
-          title: 'Repeat Settings',
-          headerTitle: '🔄 Repeat Settings',
+          title: t('activity.repeat_schedule'),
+          headerTitle: t('activity.repeat_settings_header'),
         }}
       />
       <Stack.Screen 
         name="Confirmation" 
         component={ConfirmationScreen}
         options={{
-          title: 'Confirm Activity',
-          headerTitle: '✅ Confirm Activity',
+          title: t('activity.confirmation'),
+          headerTitle: t('activity.confirm_activity_header'),
         }}
       />
     </Stack.Navigator>

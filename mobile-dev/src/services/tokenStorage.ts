@@ -49,7 +49,7 @@ class TokenStorage {
 
   async setRefreshToken(token: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync(this.REFRESH_TOKEN_KEY, token);
+      await SecureStore.setItemAsync(this.REFRESH_TOKEN_KEY, String(token));
     } catch (error) {
       console.error('Failed to set refresh token:', error);
       throw error;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { HomeStackParamList, PetCreate, PetFormData, PetGender } from '../../types';
 import { Button } from '../../components/Button';
@@ -30,6 +31,7 @@ interface AddPetScreenProps {
 }
 
 export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState<PetFormData>({
     name: '',
     species: '',
@@ -43,19 +45,29 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  const getPetEmoji = (species: string) => {
+    const s = species.trim().toLowerCase();
+    if (['dog', 'собака'].includes(s)) return '🐕';
+    if (['cat', 'кошка', 'кот'].includes(s)) return '🐱';
+    if (['bird', 'птица'].includes(s)) return '🐦';
+    if (['rabbit', 'кролик'].includes(s)) return '🐰';
+    if (['fish', 'рыба'].includes(s)) return '🐟';
+    return '🐾';
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Partial<PetFormData> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Pet name is required';
+      newErrors.name = t('pet_form.name_label') + ' ' + t('validation.required');
     }
 
     if (!formData.species.trim()) {
-      newErrors.species = 'Species is required';
+      newErrors.species = t('pet_form.species_label') + ' ' + t('validation.required');
     }
 
     if (!formData.weight || isNaN(parseFloat(formData.weight))) {
-      newErrors.weight = 'Please enter a valid weight';
+      newErrors.weight = t('validation.weight_positive');
     }
 
     setErrors(newErrors);
@@ -81,11 +93,11 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
       
       // Show success message and navigate back to pet list
       Alert.alert(
-        'Success! 🎉',
-        `${formData.name} has been added to your pets!`,
+        t('pet_form.success_add'),
+        t('pet_form.success_add_message', { name: formData.name }),
         [
           {
-            text: 'OK',
+            text: t('common.ok'),
             onPress: () => {
               navigation.goBack();
             }
@@ -94,9 +106,9 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
       );
     } catch (error) {
       Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to save pet information. Please try again.',
-        [{ text: 'OK' }]
+        t('pet_form.error'),
+        error instanceof Error ? error.message : t('pet_form.error_add'),
+        [{ text: t('common.ok') }]
       );
     } finally {
       setIsLoading(false);
@@ -112,7 +124,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
   };
 
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(i18n.language, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -127,6 +139,12 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
   const onDateCancel = () => {
     setShowDatePicker(false);
   };
+
+  useEffect(() => {
+    navigation.setOptions({
+      title: t('pet_form.add_title'),
+    });
+  }, [navigation, t]);
 
   return (
     <LinearGradient
@@ -144,20 +162,18 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
           >
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.emoji}>🐾</Text>
-              <Text style={styles.title}>Add a new pet</Text>
-              <Text style={styles.subtitle}>
-                Tell us about your new family member
-              </Text>
+              <Text style={styles.emoji}>{getPetEmoji(formData.species)}</Text>
+              <Text style={styles.title}>{t('pet_form.add_title')}</Text>
+              <Text style={styles.subtitle}>{t('pet_form.add_subtitle')}</Text>
             </View>
 
             {/* Pet Form */}
             <Card variant="elevated" style={styles.formCard}>
-              <Text style={styles.formTitle}>Pet Information</Text>
+              <Text style={styles.formTitle}>{t('pet_form.form_title')}</Text>
               
               <Input
-                label="Pet Name *"
-                placeholder="What's your pet's name?"
+                label={t('pet_form.name_label')}
+                placeholder={t('pet_form.name_placeholder')}
                 value={formData.name}
                 onChangeText={(text) => updateFormData('name', text)}
                 error={errors.name}
@@ -168,8 +184,8 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
               />
 
               <Input
-                label="Species *"
-                placeholder="e.g., Dog, Cat, Rabbit, Bird..."
+                label={t('pet_form.species_label')}
+                placeholder={t('pet_form.species_placeholder')}
                 value={formData.species}
                 onChangeText={(text) => updateFormData('species', text)}
                 error={errors.species}
@@ -180,15 +196,17 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
               />
 
               <GenderPicker
-                label="Gender *"
+                label={t('pet_form.gender_label')}
                 value={formData.gender}
                 onValueChange={(gender) => updateFormData('gender', gender)}
                 error={errors.gender}
+                maleLabel={t('pet_form.male')}
+                femaleLabel={t('pet_form.female')}
               />
 
               <Input
-                label="Breed (Optional)"
-                placeholder="e.g., Golden Retriever, Persian..."
+                label={t('pet_form.breed_label')}
+                placeholder={t('pet_form.breed_placeholder')}
                 value={formData.breed}
                 onChangeText={(text) => updateFormData('breed', text)}
                 error={errors.breed}
@@ -200,7 +218,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
 
               {/* Birthdate Picker */}
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Birthdate *</Text>
+                <Text style={styles.inputLabel}>{t('pet_form.birthdate_label')}</Text>
                 <TouchableOpacity
                   style={styles.datePickerButton}
                   onPress={() => setShowDatePicker(true)}
@@ -218,13 +236,13 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
                 onConfirm={onDateConfirm}
                 onCancel={onDateCancel}
                 maximumDate={new Date()}
-                title="Select Birthdate"
-                confirmButtonText="Apply"
+                title={t('pet_form.birthdate_picker_title')}
+                confirmButtonText={t('pet_form.birthdate_apply')}
               />
 
               <Input
-                label="Weight (kg) *"
-                placeholder="Enter weight in kilograms"
+                label={t('pet_form.weight_label')}
+                placeholder={t('pet_form.weight_placeholder')}
                 value={formData.weight}
                 onChangeText={(text) => updateFormData('weight', text)}
                 error={errors.weight}
@@ -235,8 +253,8 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
               />
 
               <Input
-                label="Notes (Optional)"
-                placeholder="Any special notes about your pet..."
+                label={t('pet_form.notes_label')}
+                placeholder={t('pet_form.notes_placeholder')}
                 value={formData.notes}
                 onChangeText={(text) => updateFormData('notes', text)}
                 error={errors.notes}
@@ -248,7 +266,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
               />
 
               <Button
-                title="Add Pet"
+                title={t('pet_form.add_button')}
                 onPress={handleSavePet}
                 loading={isLoading}
                 size="large"
@@ -258,9 +276,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
 
             {/* Helper Text */}
             <View style={styles.helperContainer}>
-              <Text style={styles.helperText}>
-                💡 Don't worry if you don't have all the details now. You can always edit this information later!
-              </Text>
+              <Text style={styles.helperText}>{t('pet_form.helper_add')}</Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

@@ -12,6 +12,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { ActivityStackParamList, RepeatData } from '../../types';
 import { Button } from '../../components/Button';
@@ -31,6 +32,7 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
   navigation,
   route,
 }) => {
+  const { t } = useTranslation();
   const { petId, category, editActivity, activityData, preselectedDate, fromScreen } = route.params;
   const isEditMode = !!editActivity;
   
@@ -98,26 +100,26 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
     {
       value: 'none' as const,
       emoji: '📅',
-      title: 'One-time',
-      description: 'This activity happens just once',
+      title: t('activity.one_time'),
+      description: t('activity.one_time_description'),
     },
     {
       value: 'daily' as const,
       emoji: '🔄',
-      title: 'Daily',
-      description: 'Repeat every day at the same time',
+      title: t('activity.daily'),
+      description: t('activity.daily_description'),
     },
     {
       value: 'weekly' as const,
       emoji: '📆',
-      title: 'Weekly',
-      description: 'Repeat every week on the same day',
+      title: t('activity.weekly'),
+      description: t('activity.weekly_description'),
     },
     {
       value: 'monthly' as const,
       emoji: '🗓️',
-      title: 'Monthly',
-      description: 'Repeat every month on the same date',
+      title: t('activity.monthly'),
+      description: t('activity.monthly_description'),
     },
   ];
 
@@ -146,7 +148,6 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
   };
 
   const categoryInfo = getCategoryInfo();
-  const repeatSummary = getRepeatSummary(repeatData.repeat);
 
   return (
     <LinearGradient
@@ -161,12 +162,12 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
               <Text style={styles.emoji}>{categoryInfo.emoji}</Text>
             </View>
             <Text style={styles.title}>
-              {isEditMode ? 'Update repeat settings' : 'Set repeat schedule'}
+              {isEditMode ? t('activity.update_repeat_settings') : t('activity.set_repeat_schedule')}
             </Text>
             <Text style={styles.subtitle}>
               {isEditMode 
-                ? 'Modify how often this activity repeats'
-                : 'Choose how often this activity should repeat'
+                ? t('activity.modify_repeat_frequency')
+                : t('activity.choose_repeat_frequency')
               }
             </Text>
           </View>
@@ -178,7 +179,7 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
           >
             {/* Repeat Options */}
             <Card variant="elevated" style={styles.optionsCard}>
-              <Text style={styles.sectionTitle}>Repeat Schedule</Text>
+              <Text style={styles.sectionTitle}>{t('activity.repeat_schedule_title')}</Text>
               
               {repeatOptions.map((option) => (
                 <TouchableOpacity
@@ -227,9 +228,9 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
                 <View style={styles.notificationLeft}>
                   <Ionicons name="notifications-outline" size={20} color={categoryInfo.color} />
                   <View style={styles.notificationText}>
-                    <Text style={styles.notificationTitle}>Notifications</Text>
+                    <Text style={styles.notificationTitle}>{t('activity.notifications')}</Text>
                     <Text style={styles.notificationDescription}>
-                      Get reminded when it's time for this activity
+                      {t('activity.notifications_description')}
                     </Text>
                   </View>
                 </View>
@@ -241,34 +242,13 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
                 />
               </View>
             </Card>
-
-            {/* Repeat Summary */}
-            {repeatSummary.willCreateRepeats && (
-              <Card variant="default" style={styles.summaryCard}>
-                <View style={styles.summaryHeader}>
-                  <Ionicons name="calendar-outline" size={20} color={categoryInfo.color} />
-                  <Text style={styles.summaryTitle}>Что будет создано</Text>
-                </View>
-                <Text style={styles.summaryDescription}>{repeatSummary.description}</Text>
-              </Card>
-            )}
-
-            {/* Info Text */}
-            {repeatData.repeat !== 'none' && (
-              <View style={styles.infoContainer}>
-                <Ionicons name="information-circle-outline" size={14} color={Colors.textSecondary} />
-                <Text style={styles.infoText}>
-                  This will create a recurring activity schedule. You can modify or stop it anytime from the calendar.
-                </Text>
-              </View>
-            )}
           </ScrollView>
 
           {/* Bottom Section */}
           <View style={styles.bottomSection}>
             {/* Continue Button */}
             <Button
-              title="Continue"
+              title={t('activity.continue')}
               onPress={handleNext}
               size="large"
               style={styles.continueButton}
@@ -276,7 +256,7 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
 
             {/* Progress */}
             <View style={styles.progressContainer}>
-              <Text style={styles.progressText}>Step 4 of 5</Text>
+              <Text style={styles.progressText}>{t('activity.step_of', { current: 4, total: 5 })}</Text>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: '80%' }]} />
               </View>
@@ -423,40 +403,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     lineHeight: 16,
-  },
-  summaryCard: {
-    marginBottom: '3%',
-  },
-  summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  summaryTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.text,
-    marginLeft: 8,
-  },
-  summaryDescription: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: Colors.info + '10',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: '3%',
-  },
-  infoText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    lineHeight: 16,
-    marginLeft: 6,
-    flex: 1,
   },
   bottomSection: {
     paddingTop: '3%',

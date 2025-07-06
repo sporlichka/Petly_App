@@ -171,4 +171,29 @@ class ActivityRecordService:
         
         db.delete(db_record)
         db.commit()
-        return True 
+        return True
+
+    @staticmethod
+    def disable_all_notifications(db: Session, current_user: User) -> bool:
+        """Отключить уведомления для всех активностей пользователя"""
+        try:
+            # Получаем все активности пользователя через его питомцев
+            user_pets = db.query(Pet).filter(Pet.user_id == current_user.id).all()
+            pet_ids = [pet.id for pet in user_pets]
+            
+            if not pet_ids:
+                # У пользователя нет питомцев, считаем операцию успешной
+                return True
+            
+            # Обновляем все активности пользователя
+            updated_count = db.query(ActivityRecord).filter(
+                ActivityRecord.pet_id.in_(pet_ids)
+            ).update({"notify": False})
+            
+            db.commit()
+            print(f"Disabled notifications for {updated_count} activities for user {current_user.id}")
+            return True
+        except Exception as e:
+            db.rollback()
+            print(f"Error disabling notifications for user {current_user.id}: {e}")
+            return False 

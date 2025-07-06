@@ -12,6 +12,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { ActivityStackParamList, ActivityFormData } from '../../types';
 import { Button } from '../../components/Button';
@@ -31,6 +32,7 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
   navigation,
   route,
 }) => {
+  const { t } = useTranslation();
   const { petId, category, editActivity, activityData: initialData, preselectedDate, fromScreen } = route.params;
   const isEditMode = !!editActivity;
   
@@ -87,25 +89,25 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
       case 'FEEDING':
         return {
           emoji: '🥣',
-          title: isEditMode ? 'Edit Feeding Details' : 'Feeding Details',
+          title: isEditMode ? t('activity.edit_feeding_details') : t('activity.feeding_details'),
           color: Colors.feeding,
         };
       case 'HEALTH':
         return {
           emoji: '🩺',
-          title: isEditMode ? 'Edit Health Details' : 'Health Details',
+          title: isEditMode ? t('activity.edit_health_details') : t('activity.health_details'),
           color: Colors.health,
         };
       case 'ACTIVITY':
         return {
           emoji: '🎾',
-          title: isEditMode ? 'Edit Activity Details' : 'Activity Details',
+          title: isEditMode ? t('activity.edit_activity_details') : t('activity.activity_details'),
           color: Colors.activity,
         };
       default:
         return { 
           emoji: '📝', 
-          title: isEditMode ? 'Edit Activity Details' : 'Activity Details', 
+          title: isEditMode ? t('activity.edit_activity_details') : t('activity.activity_details'), 
           color: Colors.primary 
         };
     }
@@ -115,17 +117,17 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
     const newErrors: Partial<ActivityFormData> = {};
 
     if (!formData.title.trim()) {
-      newErrors.title = 'Activity title is required';
+      newErrors.title = t('activity.title_required_error');
     }
 
     if (category === 'FEEDING') {
       if (!formData.food_type?.trim()) {
-        newErrors.food_type = 'Food type is required';
+        newErrors.food_type = t('activity.food_type_required_error');
       }
     }
 
     if (category === 'ACTIVITY' && !formData.duration?.trim()) {
-      newErrors.duration = 'Duration is required';
+      newErrors.duration = t('activity.duration_required_error');
     }
 
     setErrors(newErrors);
@@ -157,8 +159,8 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
   const renderFeedingForm = () => (
     <>
       <Input
-        label="Food Type *"
-        placeholder="e.g., Dry food, Wet food, Treats"
+        label={t('activity.food_type_required')}
+        placeholder={t('activity.food_type_placeholder')}
         value={formData.food_type || ''}
         onChangeText={(text) => updateFormData('food_type', text)}
         error={errors.food_type}
@@ -166,8 +168,8 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
       />
       
       <Input
-        label="Quantity (Optional)"
-        placeholder="e.g., 2 cups, 200g, 1 can"
+        label={t('activity.quantity_optional')}
+        placeholder={t('activity.quantity_placeholder')}
         value={formData.quantity || ''}
         onChangeText={(text) => updateFormData('quantity', text)}
         error={errors.quantity}
@@ -179,8 +181,8 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
   const renderActivityForm = () => (
     <>
       <Input
-        label="Duration *"
-        placeholder="e.g., 30 minutes, 1 hour"
+        label={t('activity.duration_required')}
+        placeholder={t('activity.duration_placeholder')}
         value={formData.duration || ''}
         onChangeText={(text) => updateFormData('duration', text)}
         error={errors.duration}
@@ -188,6 +190,19 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
       />
     </>
   );
+
+  const getTitlePlaceholder = () => {
+    switch (category) {
+      case 'FEEDING':
+        return t('activity.title_placeholder_feeding');
+      case 'HEALTH':
+        return t('activity.title_placeholder_health');
+      case 'ACTIVITY':
+        return t('activity.title_placeholder_activity');
+      default:
+        return t('activity.title_placeholder_activity');
+    }
+  };
 
   return (
     <LinearGradient
@@ -210,15 +225,15 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
               </View>
               <Text style={styles.title}>{categoryInfo.title}</Text>
               <Text style={styles.subtitle}>
-                Fill in the specific details for this activity
+                {t('activity.fill_specific_details')}
               </Text>
             </View>
 
             {/* Form */}
             <Card variant="elevated" style={styles.formCard}>
               <Input
-                label="Activity Title *"
-                placeholder={`e.g., ${category === 'FEEDING' ? 'Morning breakfast' : category === 'HEALTH' ? 'Vet checkup' : 'Morning walk'}`}
+                label={t('activity.activity_title_required')}
+                placeholder={getTitlePlaceholder()}
                 value={formData.title}
                 onChangeText={(text) => updateFormData('title', text)}
                 error={errors.title}
@@ -229,8 +244,8 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
               {category === 'ACTIVITY' && renderActivityForm()}
 
               <Input
-                label="Notes (Optional)"
-                placeholder="Any additional notes..."
+                label={t('activity.notes_optional')}
+                placeholder={t('activity.notes_placeholder')}
                 value={formData.notes}
                 onChangeText={(text) => updateFormData('notes', text)}
                 error={errors.notes}
@@ -240,7 +255,7 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
               />
 
               <Button
-                title="Continue"
+                title={t('activity.continue')}
                 onPress={handleNext}
                 size="large"
                 style={styles.continueButton}
@@ -249,7 +264,7 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
 
             {/* Progress */}
             <View style={styles.progressContainer}>
-              <Text style={styles.progressText}>Step 2 of 5</Text>
+              <Text style={styles.progressText}>{t('activity.step_of', { current: 2, total: 5 })}</Text>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: '40%' }]} />
               </View>

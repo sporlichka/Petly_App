@@ -8,6 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
 import { OnboardingStackParamList } from '../../types';
 import { Button } from '../../components/Button';
@@ -20,6 +21,8 @@ interface WelcomeScreenProps {
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
+  const { t, i18n } = useTranslation();
+
   const handleGetStarted = () => {
     navigation.navigate('AddPet');
   };
@@ -44,9 +47,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
 
           {/* Welcome Content */}
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Welcome to Vetly AI🎉</Text>
+            <Text style={styles.title}>{t('onboarding.welcome_title')}</Text>
             <Text style={styles.description}>
-              Track your pet's health and get AI-powered vet insights.
+              {t('onboarding.welcome_description')}
             </Text>
           </View>
 
@@ -54,32 +57,32 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
           <View style={styles.featuresContainer}>
             <View style={styles.feature}>
               <Text style={styles.featureEmoji}>🥣</Text>
-              <Text style={styles.featureText}>Track feeding times and food types</Text>
+              <Text style={styles.featureText}>{t('onboarding.feature_feeding')}</Text>
             </View>
             <View style={styles.feature}>
               <Text style={styles.featureEmoji}>🩺</Text>
-              <Text style={styles.featureText}>Monitor health and vet visits</Text>
+              <Text style={styles.featureText}>{t('onboarding.feature_health')}</Text>
             </View>
             <View style={styles.feature}>
               <Text style={styles.featureEmoji}>🎾</Text>
-              <Text style={styles.featureText}>Log activities and exercise</Text>
+              <Text style={styles.featureText}>{t('onboarding.feature_activity')}</Text>
             </View>
             <View style={styles.feature}>
               <Text style={styles.featureEmoji}>🤖</Text>
-              <Text style={styles.featureText}>Get AI vet assistance</Text>
+              <Text style={styles.featureText}>{t('onboarding.feature_ai')}</Text>
             </View>
           </View>
 
           {/* CTA Section */}
           <View style={styles.ctaContainer}>
             <Button
-              title="Let's add your first pet!"
+              title={t('onboarding.lets_add_pet')}
               onPress={handleGetStarted}
               size="large"
               style={styles.ctaButton}
             />
             <Text style={styles.ctaSubtext}>
-              Don't worry, you can add more pets later 😊
+              {t('onboarding.add_more_later')}
             </Text>
           </View>
         </View>

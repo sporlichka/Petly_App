@@ -11,6 +11,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { ActivityStackParamList, DateTimeData } from '../../types';
 import { Button } from '../../components/Button';
@@ -30,6 +31,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   navigation,
   route,
 }) => {
+  const { t, i18n } = useTranslation();
   const { petId, category, editActivity, activityData, preselectedDate, fromScreen } = route.params;
   const isEditMode = !!editActivity;
   
@@ -112,7 +114,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   };
 
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(i18n.language, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -121,7 +123,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   };
 
   const formatTime = (time: Date): string => {
-    return time.toLocaleTimeString('en-US', {
+    return time.toLocaleTimeString(i18n.language, {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -157,11 +159,11 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
     const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     
     return [
-      { label: 'Now', time: now },
-      { label: '1 hour ago', time: oneHourAgo },
-      { label: '2 hours ago', time: twoHoursAgo },
-      { label: 'In 1 hour', time: oneHourLater },
-      { label: 'In 2 hours', time: twoHoursLater },
+      { label: t('activity.now'), time: now },
+      { label: t('activity.one_hour_ago'), time: oneHourAgo },
+      { label: t('activity.two_hours_ago'), time: twoHoursAgo },
+      { label: t('activity.in_one_hour'), time: oneHourLater },
+      { label: t('activity.in_two_hours'), time: twoHoursLater },
     ];
   };
 
@@ -214,16 +216,16 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
               <Text style={styles.emoji}>{categoryInfo.emoji}</Text>
             </View>
             <Text style={styles.title}>
-              {isEditMode ? 'Update date and time' : 'When does this happen?'}
+              {isEditMode ? t('activity.update_date_time') : t('activity.when_does_happen')}
             </Text>
             <Text style={styles.subtitle}>
-              {isEditMode ? 'Modify the date and time for this activity' : 'Select when this activity occurred or will occur'}
+              {isEditMode ? t('activity.modify_date_time') : t('activity.select_when_activity')}
             </Text>
           </View>
 
           {/* Quick Time Presets */}
           <Card variant="default" style={styles.presetsCard}>
-            <Text style={styles.sectionTitle}>Quick Select</Text>
+            <Text style={styles.sectionTitle}>{t('activity.quick_select')}</Text>
             <View style={styles.presetsContainer}>
               {getQuickTimePresets().map((preset, index) => (
                 <TouchableOpacity
@@ -248,7 +250,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
               <View style={styles.selectionLeft}>
                 <Ionicons name="calendar-outline" size={24} color={categoryInfo.color} />
                 <View style={styles.selectionText}>
-                  <Text style={styles.selectionLabel}>Date</Text>
+                  <Text style={styles.selectionLabel}>{t('activity.date')}</Text>
                   <Text style={styles.selectionValue}>{formatDate(dateTimeData.date)}</Text>
                 </View>
               </View>
@@ -265,7 +267,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
               <View style={styles.selectionLeft}>
                 <Ionicons name="time-outline" size={24} color={categoryInfo.color} />
                 <View style={styles.selectionText}>
-                  <Text style={styles.selectionLabel}>Time</Text>
+                  <Text style={styles.selectionLabel}>{t('activity.time')}</Text>
                   <Text style={styles.selectionValue}>{formatTime(dateTimeData.time)}</Text>
                 </View>
               </View>
@@ -275,7 +277,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
 
           {/* Continue Button */}
           <Button
-            title="Continue"
+            title={t('activity.continue')}
             onPress={handleNext}
             size="large"
             style={styles.continueButton}
@@ -283,7 +285,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
 
           {/* Progress */}
           <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>Step 3 of 5</Text>
+            <Text style={styles.progressText}>{t('activity.step_of', { current: 3, total: 5 })}</Text>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: '60%' }]} />
             </View>
@@ -298,7 +300,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
             onCancel={handleDateCancel}
             minimumDate={new Date(new Date().getFullYear() - 2, 0, 1)} // 2 years ago
             maximumDate={new Date(new Date().getFullYear() + 1, 11, 31)} // 1 year ahead
-            title="Select Activity Date"
+            title={t('activity.select_activity_date')}
           />
 
           <DateTimePickerModal
@@ -307,7 +309,7 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
             value={dateTimeData.time}
             onConfirm={handleTimeConfirm}
             onCancel={handleTimeCancel}
-            title="Select Activity Time"
+            title={t('activity.select_activity_time')}
           />
         </View>
         </ScrollView>

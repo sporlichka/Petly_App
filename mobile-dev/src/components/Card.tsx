@@ -114,15 +114,15 @@ export const PetCard: React.FC<{
   };
 
   return (
-    <Card
-      variant="elevated"
-      padding="medium"
-      onPress={onPress}
+  <Card
+    variant="elevated"
+    padding="medium"
+    onPress={onPress}
       style={petCardStyle}
-    >
-      {children}
-    </Card>
-  );
+  >
+    {children}
+  </Card>
+);
 };
 
 export const ActivityCard: React.FC<{
@@ -143,15 +143,15 @@ export const ActivityCard: React.FC<{
   };
 
   return (
-    <Card
-      variant="default"
-      padding="medium"
-      onPress={onPress}
+  <Card
+    variant="default"
+    padding="medium"
+    onPress={onPress}
       style={activityCardStyle}
-    >
-      {children}
-    </Card>
-  );
+  >
+    {children}
+  </Card>
+);
 };
 
 const styles = StyleSheet.create({
