@@ -113,30 +113,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   const handleDisableAllNotifications = async () => {
     try {
       Alert.alert(
-        'Disable All Notifications',
-        'Are you sure you want to disable all scheduled notifications? This will cancel all reminders for your pets.',
+        t('settings.disable_all_notifications'),
+        t('settings.disable_all_notifications_confirm'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Disable All',
+            text: t('settings.disable_all'),
             style: 'destructive',
             onPress: async () => {
               setIsLoading(true);
               try {
-                const success = await notificationService.cancelAllNotifications();
-                if (success) {
-                  setScheduledCount(0);
-                  Alert.alert(
-                    'All Notifications Disabled ✅',
-                    'All scheduled notifications have been cancelled. You can re-enable them individually from the activities list.',
-                    [{ text: 'OK' }]
-                  );
-                } else {
-                  Alert.alert('Error', 'Failed to disable all notifications. Please try again.');
-                }
+                // 1. Отменяем локальные уведомления
+                const localSuccess = await notificationService.cancelAllNotifications();
+                
+                // 2. Обновляем настройки в базе данных
+                await apiService.disableAllNotifications();
+                
+                // 3. Обновляем локальное состояние
+                setScheduledCount(0);
+                setNotificationEnabled(false);
+                
+                Alert.alert(
+                  t('settings.notifications_disabled_title'),
+                  t('settings.notifications_disabled_message'),
+                  [{ text: t('common.ok') }]
+                );
               } catch (error) {
                 console.error('Failed to disable notifications:', error);
-                Alert.alert('Error', 'Failed to disable all notifications. Please try again.');
+                Alert.alert(t('common.error'), t('settings.error_disabling_notifications'));
               } finally {
                 setIsLoading(false);
               }

@@ -394,6 +394,12 @@ class ApiService {
     });
   }
 
+  async disableAllNotifications(): Promise<void> {
+    await this.request('/records/disable-all-notifications', {
+      method: 'PATCH',
+    });
+  }
+
   // AI Chat endpoints
   async sendChatMessage(request: ChatRequest): Promise<ChatResponse> {
     return this.request<ChatResponse>('/ai/assist', {

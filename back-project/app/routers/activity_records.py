@@ -111,6 +111,20 @@ def get_activity_records(
     )
     return records
 
+@router.patch("/disable-all-notifications")
+def disable_all_notifications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Отключить уведомления для всех активностей пользователя"""
+    success = ActivityRecordService.disable_all_notifications(db, current_user)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to disable notifications"
+        )
+    return {"message": "All notifications disabled successfully"}
+
 @router.get("/{record_id}", response_model=ActivityRecordRead)
 def get_activity_record(
     record_id: int,
@@ -173,18 +187,4 @@ def delete_activity_record(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied or record not found"
         )
-    return {"message": "Запись успешно удалена"}
-
-@router.patch("/disable-all-notifications")
-def disable_all_notifications(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Отключить уведомления для всех активностей пользователя"""
-    success = ActivityRecordService.disable_all_notifications(db, current_user)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to disable notifications"
-        )
-    return {"message": "All notifications disabled successfully"} 
+    return {"message": "Запись успешно удалена"} 
