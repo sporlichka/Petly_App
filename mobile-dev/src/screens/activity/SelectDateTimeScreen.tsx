@@ -136,11 +136,8 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
 
   const handleTimeConfirm = (selectedTime: Date) => {
     setShowTimePicker(false);
-    // Create a new time object with proper time values
-    const today = new Date();
-    const timeToSet = new Date(today.getFullYear(), today.getMonth(), today.getDate(),
-                              selectedTime.getHours(), selectedTime.getMinutes(), selectedTime.getSeconds());
-    setDateTimeData(prev => ({ ...prev, time: timeToSet }));
+    // Сохраняем выбранное время как есть, без изменения даты
+    setDateTimeData(prev => ({ ...prev, time: selectedTime }));
   };
 
   const handleDateCancel = () => {
@@ -168,12 +165,12 @@ export const SelectDateTimeScreen: React.FC<SelectDateTimeScreenProps> = ({
   };
 
   const handleQuickTimeSelect = (time: Date) => {
-    // Create a proper time object for today with the selected time
+    // Создаем время с текущей датой и выбранным временем
     const today = new Date();
     const selectedTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 
                                  time.getHours(), time.getMinutes(), time.getSeconds());
     
-    // When selecting a future time, also set the date to today if it's not already set to future
+    // Когда выбираем будущее время, также устанавливаем дату на сегодня если она не уже установлена на будущее
     const selectedDate = time > new Date() ? today : dateTimeData.date;
     setDateTimeData(prev => ({ ...prev, time: selectedTime, date: selectedDate }));
   };

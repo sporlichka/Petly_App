@@ -330,7 +330,8 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    marginBottom: 15,
   },
   modalContainer: {
     backgroundColor: Colors.surface,

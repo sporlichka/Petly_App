@@ -129,9 +129,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
                 // 2. Обновляем настройки в базе данных
                 await apiService.disableAllNotifications();
                 
-                // 3. Обновляем локальное состояние
+                // 3. Обновляем только счетчик уведомлений (но не статус permissions)
                 setScheduledCount(0);
-                setNotificationEnabled(false);
                 
                 Alert.alert(
                   t('settings.notifications_disabled_title'),
