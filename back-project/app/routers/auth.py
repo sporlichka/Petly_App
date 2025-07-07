@@ -12,9 +12,6 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserRead, summary="Register", description="Register a new user.")
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
-    existing = user_service.get_user_by_username(db, user_in.username)
-    if existing:
-        raise HTTPException(status_code=400, detail="Username already registered")
     user = user_service.create_user(db, user_in)
     return user
 
