@@ -188,6 +188,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
           onPress: async () => {
             setIsLoading(true);
             try {
+              // Cancel all scheduled notifications before logout
+              await notificationService.cancelAllNotifications();
               await apiService.logout();
               onLogout();
             } catch (error) {
@@ -287,6 +289,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
                   onPress: async () => {
                     setIsLoading(true);
                     try {
+                      // Cancel all scheduled notifications before profile deletion
+                      await notificationService.cancelAllNotifications();
                       await apiService.deleteProfile();
                       Alert.alert(
                         'Profile Deleted',
@@ -353,7 +357,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
 
         {/* Notifications Section */}
         <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>{t('settings.notifications')}</Text>
+          <Text style={styles.sectionTitle}>{t('settings.nots')}</Text>
           
           {notificationEnabled && (
             <Card style={styles.settingCard} onPress={handleDisableAllNotifications}>

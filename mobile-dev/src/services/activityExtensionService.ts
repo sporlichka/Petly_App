@@ -11,6 +11,7 @@ import {
   scheduleExtensionReminder
 } from '../utils/repeatHelpers';
 import { ExtensionModalData, extensionModalService } from './extensionModalService';
+import i18n from '../i18n';
 
 export interface ActivityExtensionResult {
   success: boolean;
@@ -176,7 +177,10 @@ export class ActivityExtensionService {
       time: this.formatLocalDateTime(date),
       repeat: undefined, // Продления не повторяются сами
       notify: true, // Всегда включаем уведомления для продлений
-      notes: `Activity extension (${data.originalRepeat})`,
+      notes: i18n.t('activity.notifications.extension_reminder_body', { 
+        repeatType: data.originalRepeat,
+        petName: 'your pet'
+      }),
     };
 
     return await apiService.createActivityRecord(activityData);

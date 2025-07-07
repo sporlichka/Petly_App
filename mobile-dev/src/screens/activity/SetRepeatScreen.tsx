@@ -228,7 +228,7 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
                 <View style={styles.notificationLeft}>
                   <Ionicons name="notifications-outline" size={20} color={categoryInfo.color} />
                   <View style={styles.notificationText}>
-                    <Text style={styles.notificationTitle}>{t('activity.notifications')}</Text>
+                    <Text style={styles.notificationTitle}>{t('activity.nots')}</Text>
                     <Text style={styles.notificationDescription}>
                       {t('activity.notifications_description')}
                     </Text>

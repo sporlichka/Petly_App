@@ -6,6 +6,7 @@ import { Platform, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import dayjs from 'dayjs';
 import { ActivityRecord } from '../types';
+import i18n from '../i18n';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -244,7 +245,7 @@ export class NotificationService {
 
       // Create notification content
       const notificationContent: Notifications.NotificationContentInput = {
-        title: `🐾 ${activity.title}`,
+        title: this.createNotificationTitle(activity, petName),
         body: this.createNotificationBody(activity, petName),
         sound: 'default',
         data: {
@@ -338,28 +339,44 @@ export class NotificationService {
     }
   }
 
-  private createNotificationBody(activity: ActivityRecord, petName?: string): string {
-    let body = '';
+  private createNotificationTitle(activity: ActivityRecord, petName?: string): string {
     const pet = petName || 'your pet';
     
     switch (activity.category) {
       case 'FEEDING':
-        body = `🍽️ Time to feed ${pet}`;
-        if (activity.food_type) {
-          body += ` (${activity.food_type})`;
-        }
+        return i18n.t('activity.notifications.feeding_title', { petName: pet });
+      case 'HEALTH':
+        return i18n.t('activity.notifications.health_title', { petName: pet });
+      case 'ACTIVITY':
+        return i18n.t('activity.notifications.activity_title', { petName: pet });
+      default:
+        return i18n.t('activity.notifications.general_title', { petName: pet });
+    }
+  }
+
+  private createNotificationBody(activity: ActivityRecord, petName?: string): string {
+    const pet = petName || 'your pet';
+    
+    let body = '';
+    
+    switch (activity.category) {
+      case 'FEEDING':
+        body = i18n.t('activity.notifications.feeding_body', { 
+          petName: pet,
+          foodType: activity.food_type 
+        });
         break;
       case 'HEALTH':
-        body = `🩺 Health check time for ${pet}`;
+        body = i18n.t('activity.notifications.health_body', { petName: pet });
         break;
       case 'ACTIVITY':
-        body = `🎾 Time for ${pet}'s activity`;
-        if (activity.duration) {
-          body += ` (${activity.duration})`;
-        }
+        body = i18n.t('activity.notifications.activity_body', { 
+          petName: pet,
+          duration: activity.duration 
+        });
         break;
       default:
-        body = `📝 Reminder for ${pet}`;
+        body = i18n.t('activity.notifications.general_body', { petName: pet });
     }
 
     if (activity.notes && activity.notes.trim()) {
@@ -623,8 +640,8 @@ export class NotificationService {
       
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
-          title: '🧪 Test Notification',
-          body: 'This is a test notification to verify the enhanced service works',
+          title: i18n.t('activity.notifications.test_title'),
+          body: i18n.t('activity.notifications.test_body'),
           sound: 'default',
           data: { test: true },
         },

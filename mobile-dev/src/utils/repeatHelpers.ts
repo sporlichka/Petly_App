@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { ActivityRecordCreate, ActivityRecord } from '../types';
 import { extensionModalService } from '../services/extensionModalService';
+import i18n from '../i18n';
 
 /**
  * Генерирует список дат для повторяющихся активностей
@@ -108,8 +109,11 @@ export async function scheduleExtensionReminder(
     // Планируем уведомление
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
-        title: '⏰ Activity schedule completed',
-        body: `Would you like to extend the schedule for "${activity.title}"?`,
+        title: i18n.t('activity.notifications.extension_reminder_title'),
+        body: i18n.t('activity.notifications.extension_reminder_body', {
+          repeatType: repeat,
+          petName: 'your pet'
+        }),
         sound: 'default',
         data: {
           type: 'repeat-extension',
@@ -172,11 +176,11 @@ export function shouldCreateRepeats(repeat: string | undefined | null): boolean 
 export function getRepeatDescription(repeat: 'daily' | 'weekly' | 'monthly'): string {
   switch (repeat) {
     case 'daily':
-      return 'каждый день в течение 7 дней (с уведомлениями для каждого дня)';
+      return i18n.t('activity.notifications.repeat_descriptions.daily');
     case 'weekly':
-      return 'каждую неделю в течение 4 недель (с уведомлениями для каждой недели)';
+      return i18n.t('activity.notifications.repeat_descriptions.weekly');
     case 'monthly':
-      return 'каждый месяц в течение 3 месяцев (с уведомлениями для каждого месяца)';
+      return i18n.t('activity.notifications.repeat_descriptions.monthly');
     default:
       return '';
   }
