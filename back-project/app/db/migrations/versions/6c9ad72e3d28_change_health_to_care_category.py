@@ -20,31 +20,35 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Create new enum type with CARE instead of HEALTH
-    op.execute("ALTER TYPE activitycategory RENAME TO activitycategory_old")
-    op.execute("CREATE TYPE activitycategory AS ENUM ('FEEDING', 'CARE', 'ACTIVITY')")
+    # Add a temporary column with the new enum type
+    op.execute("CREATE TYPE activitycategory_new AS ENUM ('FEEDING', 'CARE', 'ACTIVITY')")
+    op.execute("ALTER TABLE activity_records ADD COLUMN category_new activitycategory_new")
     
-    # Update the column to use new enum type
-    op.execute("ALTER TABLE activity_records ALTER COLUMN category TYPE activitycategory USING category::text::activitycategory")
+    # Copy data with transformation
+    op.execute("UPDATE activity_records SET category_new = CASE WHEN category = 'HEALTH' THEN 'CARE'::activitycategory_new ELSE category::text::activitycategory_new END")
     
-    # Update existing records from HEALTH to CARE
-    op.execute("UPDATE activity_records SET category = 'CARE' WHERE category = 'HEALTH'")
+    # Drop old column and enum
+    op.execute("ALTER TABLE activity_records DROP COLUMN category")
+    op.execute("DROP TYPE activitycategory")
     
-    # Drop old enum type
-    op.execute("DROP TYPE activitycategory_old")
+    # Rename new column and enum
+    op.execute("ALTER TABLE activity_records RENAME COLUMN category_new TO category")
+    op.execute("ALTER TYPE activitycategory_new RENAME TO activitycategory")
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    # Create old enum type with HEALTH
-    op.execute("ALTER TYPE activitycategory RENAME TO activitycategory_new")
-    op.execute("CREATE TYPE activitycategory AS ENUM ('FEEDING', 'HEALTH', 'ACTIVITY')")
+    # Add a temporary column with the old enum type
+    op.execute("CREATE TYPE activitycategory_old AS ENUM ('FEEDING', 'HEALTH', 'ACTIVITY')")
+    op.execute("ALTER TABLE activity_records ADD COLUMN category_old activitycategory_old")
     
-    # Update existing records from CARE back to HEALTH
-    op.execute("UPDATE activity_records SET category = 'HEALTH' WHERE category = 'CARE'")
+    # Copy data with transformation
+    op.execute("UPDATE activity_records SET category_old = CASE WHEN category = 'CARE' THEN 'HEALTH'::activitycategory_old ELSE category::text::activitycategory_old END")
     
-    # Update the column to use old enum type
-    op.execute("ALTER TABLE activity_records ALTER COLUMN category TYPE activitycategory USING category::text::activitycategory")
+    # Drop new column and enum
+    op.execute("ALTER TABLE activity_records DROP COLUMN category")
+    op.execute("DROP TYPE activitycategory")
     
-    # Drop new enum type
-    op.execute("DROP TYPE activitycategory_new")
+    # Rename old column and enum
+    op.execute("ALTER TABLE activity_records RENAME COLUMN category_old TO category")
+    op.execute("ALTER TYPE activitycategory_old RENAME TO activitycategory")
