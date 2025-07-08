@@ -60,7 +60,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
               <Text style={styles.featureText}>{t('onboarding.feature_feeding')}</Text>
             </View>
             <View style={styles.feature}>
-              <Text style={styles.featureEmoji}>🩺</Text>
+              <Text style={styles.featureEmoji}>🦴</Text>
               <Text style={styles.featureText}>{t('onboarding.feature_care')}</Text>
             </View>
             <View style={styles.feature}>

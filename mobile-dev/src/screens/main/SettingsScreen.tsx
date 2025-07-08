@@ -159,14 +159,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
         setNotificationEnabled(true);
         Alert.alert(
           'Permissions Granted! ✅',
-          'Notifications are now enabled for Vetly AI reminders.',
+          'Notifications are now enabled for Petly reminders.',
           [{ text: 'OK' }]
         );
         await loadNotificationStatus();
       } else {
         Alert.alert(
           'Permission Denied',
-          'Please enable notifications in your device settings to receive Vetly AI reminders.',
+          'Please enable notifications in your device settings to receive Petly reminders.',
           [{ text: 'OK' }]
         );
       }
