@@ -20,9 +20,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Update existing records from HEALTH to CARE
-    op.execute("UPDATE activity_records SET category = 'CARE' WHERE category = 'HEALTH'")
-    
     # Create new enum type with CARE instead of HEALTH
     op.execute("ALTER TYPE activitycategory RENAME TO activitycategory_old")
     op.execute("CREATE TYPE activitycategory AS ENUM ('FEEDING', 'CARE', 'ACTIVITY')")
@@ -30,18 +27,21 @@ def upgrade() -> None:
     # Update the column to use new enum type
     op.execute("ALTER TABLE activity_records ALTER COLUMN category TYPE activitycategory USING category::text::activitycategory")
     
+    # Update existing records from HEALTH to CARE
+    op.execute("UPDATE activity_records SET category = 'CARE' WHERE category = 'HEALTH'")
+    
     # Drop old enum type
     op.execute("DROP TYPE activitycategory_old")
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    # Update existing records from CARE back to HEALTH
-    op.execute("UPDATE activity_records SET category = 'HEALTH' WHERE category = 'CARE'")
-    
     # Create old enum type with HEALTH
     op.execute("ALTER TYPE activitycategory RENAME TO activitycategory_new")
     op.execute("CREATE TYPE activitycategory AS ENUM ('FEEDING', 'HEALTH', 'ACTIVITY')")
+    
+    # Update existing records from CARE back to HEALTH
+    op.execute("UPDATE activity_records SET category = 'HEALTH' WHERE category = 'CARE'")
     
     # Update the column to use old enum type
     op.execute("ALTER TABLE activity_records ALTER COLUMN category TYPE activitycategory USING category::text::activitycategory")
