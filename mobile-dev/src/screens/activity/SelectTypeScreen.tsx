@@ -70,7 +70,7 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
     {
       id: 'care',
       category: 'CARE' as ActivityCategory,
-      icon: '🦴',
+      emoji: '🦴',
       title: t('activity.care'),
       description: t('activity.care_description'),
       color: Colors.care,

@@ -35,7 +35,7 @@
         "SCHEDULE_EXACT_ALARM",
         "USE_EXACT_ALARM"
       ],
-      "package": "com.tabchny.vetlyai"
+      "package": "com.tabchny.petlyassistant"
     },
     "web": {
       "favicon": "./assets/vetly-logo.png"
@@ -58,7 +58,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "1b467ab6-4e62-4001-b4e1-4e73b25e0cdc"
+        "projectId": "de423890-a568-4126-8616-611917f88602"
       }
     }
   }

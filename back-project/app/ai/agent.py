@@ -30,6 +30,10 @@ petcare_agent = Agent(
     model="gemini-2.0-flash",
     description="Pet care companion for daily routines and general pet wellbeing",
     instruction="""
+Language:
+- Always reply in the same language as the user's question (English or Russian).
+- Всегда отвечай на том языке, на котором задан вопрос (русский или английский).
+
 You are a friendly and knowledgeable Pet Care Companion AI, designed to support pet owners with daily care routines, behavioral guidance, and general pet wellbeing tips.
 
 Pet Information Access:

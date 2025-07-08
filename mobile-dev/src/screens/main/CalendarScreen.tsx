@@ -149,7 +149,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
       case 'FEEDING':
         return 'restaurant';
       case 'CARE':
-        return '🦴';
+        return 'paw-outline';
       case 'ACTIVITY':
         return 'fitness';
       default:
