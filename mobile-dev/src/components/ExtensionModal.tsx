@@ -37,8 +37,8 @@ export const ExtensionModal: React.FC<ExtensionModalProps> = ({
     switch (data.category) {
       case 'FEEDING':
         return { emoji: '🥣', color: Colors.feeding, title: 'Feeding' };
-      case 'HEALTH':
-        return { emoji: '🩺', color: Colors.health, title: 'Health' };
+      case 'CARE':
+        return { emoji: '🦴', color: Colors.care, title: 'Care' };
       case 'ACTIVITY':
         return { emoji: '🎾', color: Colors.activity, title: 'Activity' };
       default:

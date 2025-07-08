@@ -1,7 +1,7 @@
 {
-  "name": "vetly-ai",
+  "name": "petly-assistant",
   "version": "1.0.0",
-  "description": "AI-powered veterinary assistant for pet health and activity tracking",
+  "description": "Your smart companion for pet care, activity tracking, and daily routines",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",

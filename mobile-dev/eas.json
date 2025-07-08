@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 16.12.0",
+    "version": ">= 16.13.4",
     "appVersionSource": "remote"
   },
   "build": {
@@ -9,16 +9,19 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      }
+      "distribution": "internal"
     },
     "production": {
       "autoIncrement": true
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios" :{
+        "appleId": "gubayev0703@icloud.com",
+        "ascAppId": "6748297500",
+        "appleTeamId": "DJDVY4P58A"
+      }
+    }
   }
 }

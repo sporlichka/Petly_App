@@ -5,7 +5,7 @@ import enum
 
 class ActivityCategory(enum.Enum):
     FEEDING = "FEEDING"
-    HEALTH = "HEALTH"
+    CARE = "CARE"
     ACTIVITY = "ACTIVITY"
 
 class ActivityRecord(Base):

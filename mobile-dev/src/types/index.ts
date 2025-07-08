@@ -63,7 +63,7 @@ export interface PetCreate {
 export interface PetUpdate extends PetCreate {}
 
 // Activity Record types
-export type ActivityCategory = 'FEEDING' | 'HEALTH' | 'ACTIVITY';
+export type ActivityCategory = 'FEEDING' | 'CARE' | 'ACTIVITY';
 
 export interface ActivityRecord {
   id: number;

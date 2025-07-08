@@ -21,7 +21,7 @@ export const Colors = {
   
   // Activity category colors
   feeding: '#FF8A65',      // Warm orange
-  health: '#81C784',       // Soft green
+  care: '#81C784',         // Soft green
   activity: '#64B5F6',     // Light blue
   
   // Status colors
@@ -53,7 +53,7 @@ export const Colors = {
 
 export const ActivityColors = {
   feeding: Colors.feeding,
-  health: Colors.health,
+  care: Colors.care,
   activity: Colors.activity,
 };
 

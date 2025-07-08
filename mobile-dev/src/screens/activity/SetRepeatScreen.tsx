@@ -87,8 +87,8 @@ export const SetRepeatScreen: React.FC<SetRepeatScreenProps> = ({
     switch (category) {
       case 'FEEDING':
         return { emoji: '🥣', color: Colors.feeding };
-      case 'HEALTH':
-        return { emoji: '🩺', color: Colors.health };
+      case 'CARE':
+        return { emoji: '🦴', color: Colors.care };
       case 'ACTIVITY':
         return { emoji: '🎾', color: Colors.activity };
       default:

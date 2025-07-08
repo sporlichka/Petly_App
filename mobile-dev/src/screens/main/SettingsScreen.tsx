@@ -449,10 +449,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appTitle}>Vetly AI</Text>
+          <Text style={styles.appTitle}>Petly</Text>
           <Text style={styles.appVersion}>Version 1.0.0</Text>
           <Text style={styles.appDescription}>
-            AI-powered veterinary assistant for pet health and activity tracking
+            Your smart companion for pet care, activity tracking, and daily routines
           </Text>
         </View>
 

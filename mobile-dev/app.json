@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Vetly AI",
-    "slug": "vetly-ai",
+    "name": "Petly: Your Assistant",
+    "slug": "petly-assistant",
     "version": "1.0.0",
-    "description": "AI-powered veterinary assistant for pet health and activity tracking",
+    "description": "Your smart companion for pet care, activity tracking, and daily routines",
     "orientation": "portrait",
     "icon": "./assets/vetly-logo.png",
     "userInterfaceStyle": "light",
@@ -13,33 +13,27 @@
       "backgroundColor": "#FFC107"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "UIBackgroundModes": [
-          "fetch",
-          "remote-notification",
-          "background-processing"
+          "fetch"
         ],
-        "NSUserNotificationsUsageDescription": "Vetly AI needs notifications to remind you about your pet's activities and health checks.",
-        "NSCameraUsageDescription": "Vetly AI needs camera access to take photos of your pets.",
-        "NSPhotoLibraryUsageDescription": "Vetly AI needs photo library access to select pet photos.",
+        "NSUserNotificationsUsageDescription": "Petly needs notifications to remind you about your pet's daily activities and care routines.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.tabchny.vetlyai"
+      "bundleIdentifier": "com.tabchny.petlyassistant"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/vetly-logo.png",
         "backgroundColor": "#FFC107"
       },
-      "edgeToEdgeEnabled": true,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "WAKE_LOCK",
         "SCHEDULE_EXACT_ALARM",
-        "USE_EXACT_ALARM",
-        "POST_NOTIFICATIONS"
+        "USE_EXACT_ALARM"
       ],
       "package": "com.tabchny.vetlyai"
     },

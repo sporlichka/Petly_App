@@ -186,8 +186,8 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
     switch (category) {
       case 'FEEDING':
         return '🥣';
-      case 'HEALTH':
-        return '🩺';
+      case 'CARE':
+        return '🦴';
       case 'ACTIVITY':
         return '🎾';
       default:
@@ -199,8 +199,8 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
     switch (category) {
       case 'FEEDING':
         return Colors.feeding;
-      case 'HEALTH':
-        return Colors.health;
+      case 'CARE':
+        return Colors.care;
       case 'ACTIVITY':
         return Colors.activity;
       default:

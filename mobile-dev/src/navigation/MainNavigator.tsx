@@ -105,7 +105,7 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
         name="Chat" 
         component={ChatScreen}
         options={{
-          tabBarLabel: t('common.vetly_ai_assistant'),
+          tabBarLabel: t('common.petly_assistant'),
         }}
       />
       <Tab.Screen 

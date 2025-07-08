@@ -92,11 +92,11 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
           title: isEditMode ? t('activity.edit_feeding_details') : t('activity.feeding_details'),
           color: Colors.feeding,
         };
-      case 'HEALTH':
+      case 'CARE':
         return {
-          emoji: '🩺',
-          title: isEditMode ? t('activity.edit_health_details') : t('activity.health_details'),
-          color: Colors.health,
+          emoji: '🦴',
+          title: isEditMode ? t('activity.edit_care_details') : t('activity.care_details'),
+          color: Colors.care,
         };
       case 'ACTIVITY':
         return {
@@ -195,8 +195,8 @@ export const FillDetailsScreen: React.FC<FillDetailsScreenProps> = ({
     switch (category) {
       case 'FEEDING':
         return t('activity.title_placeholder_feeding');
-      case 'HEALTH':
-        return t('activity.title_placeholder_health');
+      case 'CARE':
+        return t('activity.title_placeholder_care');
       case 'ACTIVITY':
         return t('activity.title_placeholder_activity');
       default:

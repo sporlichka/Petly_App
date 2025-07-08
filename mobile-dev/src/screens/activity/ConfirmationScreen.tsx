@@ -71,8 +71,8 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
     switch (category) {
       case 'FEEDING':
         return { emoji: '🥣', color: Colors.feeding, title: t('activity.feeding_activity') };
-      case 'HEALTH':
-        return { emoji: '🩺', color: Colors.health, title: t('activity.health_activity') };
+      case 'CARE':
+        return { emoji: '🦴', color: Colors.care, title: t('activity.care_activity') };
       case 'ACTIVITY':
         return { emoji: '🎾', color: Colors.activity, title: t('activity.physical_activity') };
       default:

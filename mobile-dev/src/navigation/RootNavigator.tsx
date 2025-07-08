@@ -22,7 +22,7 @@ export const RootNavigator: React.FC = () => {
 
   const initializeApp = async () => {
     try {
-      console.log('🚀 Initializing Vetly AI app...');
+      console.log('🚀 Initializing Petly app...');
       
       // Initialize enhanced notification service
       console.log('🔔 Initializing enhanced notification service...');

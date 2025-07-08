@@ -135,8 +135,8 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     switch (category) {
       case 'FEEDING':
         return Colors.feeding;
-      case 'HEALTH':
-        return Colors.health;
+      case 'CARE':
+        return Colors.care;
       case 'ACTIVITY':
         return Colors.activity;
       default:
@@ -148,8 +148,8 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     switch (category) {
       case 'FEEDING':
         return 'restaurant';
-      case 'HEALTH':
-        return 'medical';
+      case 'CARE':
+        return '🦴';
       case 'ACTIVITY':
         return 'fitness';
       default:
@@ -415,9 +415,9 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
       }
     }
     
-    // Show health-specific details (without temperature and weight)
-    if (activity.category === 'HEALTH') {
-      // Only show notes for health records, temperature and weight will be removed
+    // Show care-specific details (without temperature and weight)
+    if (activity.category === 'CARE') {
+      // Only show notes for care records, temperature and weight will be removed
     }
     
     if (details.length > 0) {

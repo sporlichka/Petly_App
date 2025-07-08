@@ -60,6 +60,7 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
 
   const activityTypes = [
     {
+      id: 'feeding',
       category: 'FEEDING' as ActivityCategory,
       emoji: '🥣',
       title: t('activity.feeding'),
@@ -67,11 +68,12 @@ export const SelectTypeScreen: React.FC<SelectTypeScreenProps> = ({
       color: Colors.feeding,
     },
     {
-      category: 'HEALTH' as ActivityCategory,
-      emoji: '🩺',
-      title: t('activity.health'),
-      description: t('activity.health_description'),
-      color: Colors.health,
+      id: 'care',
+      category: 'CARE' as ActivityCategory,
+      icon: '🦴',
+      title: t('activity.care'),
+      description: t('activity.care_description'),
+      color: Colors.care,
     },
     {
       category: 'ACTIVITY' as ActivityCategory,

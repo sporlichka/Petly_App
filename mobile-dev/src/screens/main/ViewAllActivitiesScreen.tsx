@@ -231,7 +231,7 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
   const getActivityIcon = (category: string): string => {
     switch (category) {
       case 'FEEDING': return '🥣';
-      case 'HEALTH': return '🩺';
+      case 'CARE': return '🦴';
       case 'ACTIVITY': return '🎾';
       default: return '📝';
     }
@@ -240,7 +240,7 @@ export const ViewAllActivitiesScreen: React.FC<ViewAllActivitiesScreenProps> = (
   const getActivityColor = (category: string): string => {
     switch (category) {
       case 'FEEDING': return Colors.feeding;
-      case 'HEALTH': return Colors.health;
+      case 'CARE': return Colors.care;
       case 'ACTIVITY': return Colors.activity;
       default: return Colors.primary;
     }
