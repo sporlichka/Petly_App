@@ -6,6 +6,7 @@ import {
   Alert,
   ScrollView,
   Modal,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,6 +70,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   };
 
   const loadNotificationStatus = async () => {
+    // 🌐 For web platform, set disabled status
+    if (Platform.OS === 'web') {
+      setNotificationEnabled(false);
+      setScheduledCount(0);
+      return;
+    }
+
     try {
       const enabled = await notificationService.isNotificationEnabled();
       setNotificationEnabled(enabled);
@@ -83,6 +91,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   };
 
   const loadBackgroundTaskStatus = async () => {
+    // 🌐 For web platform, set N/A status
+    if (Platform.OS === 'web') {
+      setBackgroundTaskStatus('N/A (Web)');
+      return;
+    }
+
     try {
       const statusText = await backgroundTaskService.getBackgroundTaskStatusText();
       setBackgroundTaskStatus(statusText);
@@ -153,6 +167,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   };
 
   const handleRequestNotificationPermission = async () => {
+    // 🌐 Skip notification permission request for web platform
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Web Platform',
+        'Push notifications are not supported on web platform. They are available on mobile devices only.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       const success = await notificationService.initialize();
       if (success) {

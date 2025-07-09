@@ -8,15 +8,17 @@ import dayjs from 'dayjs';
 import { ActivityRecord } from '../types';
 import i18n from '../i18n';
 
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true, // Show as a banner (iOS 14+)
-    shouldShowList: true,   // Show in notification center (iOS 14+)
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Configure notification behavior (only for mobile platforms)
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true, // Show as a banner (iOS 14+)
+      shouldShowList: true,   // Show in notification center (iOS 14+)
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 // Storage keys
 const NOTIFICATION_IDS_STORAGE_KEY = 'activity_notification_ids';
@@ -50,6 +52,13 @@ export class NotificationService {
     }
 
     if (this.initializationFailed) {
+      return false;
+    }
+
+    // 🌐 Skip notification initialization for web platform
+    if (Platform.OS === 'web') {
+      console.log('🌐 Skipping notification service initialization for web platform');
+      this.initializationFailed = true;
       return false;
     }
 
@@ -204,6 +213,12 @@ export class NotificationService {
   }
 
   async scheduleActivityNotification(activity: ActivityRecord, petName?: string): Promise<string | null> {
+    // 🌐 Skip notification scheduling for web platform
+    if (Platform.OS === 'web') {
+      console.log(`🌐 Skipping notification scheduling for web platform (activity ${activity.id})`);
+      return null;
+    }
+
     try {
       console.log(`🔔 Scheduling notification for activity ${activity.id}`);
       
@@ -345,7 +360,7 @@ export class NotificationService {
     switch (activity.category) {
       case 'FEEDING':
         return i18n.t('activity.notifications.feeding_title', { petName: pet });
-      case 'HEALTH':
+      case 'CARE':
         return i18n.t('activity.notifications.health_title', { petName: pet });
       case 'ACTIVITY':
         return i18n.t('activity.notifications.activity_title', { petName: pet });
@@ -366,7 +381,7 @@ export class NotificationService {
           foodType: activity.food_type 
         });
         break;
-      case 'HEALTH':
+      case 'CARE':
         body = i18n.t('activity.notifications.health_body', { petName: pet });
         break;
       case 'ACTIVITY':
@@ -460,6 +475,12 @@ export class NotificationService {
   }
 
   async cancelNotificationForActivity(activityId: number): Promise<boolean> {
+    // 🌐 Skip notification cancellation for web platform
+    if (Platform.OS === 'web') {
+      console.log(`🌐 Skipping notification cancellation for web platform (activity ${activityId})`);
+      return true;
+    }
+
     try {
       const mapping = this.notificationIds[activityId.toString()];
       if (mapping) {
@@ -491,6 +512,12 @@ export class NotificationService {
   }
 
   async cancelExtensionReminder(activityId: number): Promise<boolean> {
+    // 🌐 Skip extension reminder cancellation for web platform
+    if (Platform.OS === 'web') {
+      console.log(`🌐 Skipping extension reminder cancellation for web platform (activity ${activityId})`);
+      return true;
+    }
+
     try {
       const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
       
@@ -516,6 +543,12 @@ export class NotificationService {
   }
 
   async checkAndScheduleMissedNotifications(): Promise<void> {
+    // 🌐 Skip missed notifications check for web platform
+    if (Platform.OS === 'web') {
+      console.log('🌐 Skipping missed notifications check for web platform');
+      return;
+    }
+
     try {
       console.log('🔍 Checking for missed notifications...');
 
@@ -544,6 +577,12 @@ export class NotificationService {
   }
 
   async cleanupExpiredNotifications(): Promise<void> {
+    // 🌐 Skip cleanup for web platform
+    if (Platform.OS === 'web') {
+      console.log('🌐 Skipping expired notifications cleanup for web platform');
+      return;
+    }
+
     try {
       console.log('🧹 Cleaning up expired notifications...');
       
@@ -586,6 +625,11 @@ export class NotificationService {
   }
 
   async getScheduledNotificationsCount(): Promise<number> {
+    // 🌐 Return 0 for web platform
+    if (Platform.OS === 'web') {
+      return 0;
+    }
+
     try {
       const notifications = await Notifications.getAllScheduledNotificationsAsync();
       return notifications.length;
@@ -596,6 +640,12 @@ export class NotificationService {
   }
 
   async cancelAllNotifications(): Promise<boolean> {
+    // 🌐 Skip notification cancellation for web platform
+    if (Platform.OS === 'web') {
+      console.log('🌐 Skipping all notifications cancellation for web platform');
+      return true;
+    }
+
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
       this.notificationIds = {} as NotificationIdMapping;
@@ -609,6 +659,11 @@ export class NotificationService {
   }
 
   async isNotificationEnabled(): Promise<boolean> {
+    // 🌐 Return false for web platform
+    if (Platform.OS === 'web') {
+      return false;
+    }
+
     if (!Device.isDevice) {
       return false;
     }
@@ -622,6 +677,12 @@ export class NotificationService {
   }
 
   async scheduleTestNotification(): Promise<string | null> {
+    // 🌐 Skip test notification for web platform
+    if (Platform.OS === 'web') {
+      console.log('🌐 Skipping test notification for web platform');
+      return null;
+    }
+
     try {
       console.log(`🧪 Testing enhanced notification scheduling...`);
       

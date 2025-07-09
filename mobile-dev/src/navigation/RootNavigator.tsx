@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
@@ -24,25 +24,30 @@ export const RootNavigator: React.FC = () => {
     try {
       console.log('🚀 Initializing Petly app...');
       
-      // Initialize enhanced notification service
-      console.log('🔔 Initializing enhanced notification service...');
-      const notificationInitialized = await notificationService.initialize();
-      if (notificationInitialized) {
-        console.log('✅ Enhanced notification service initialized successfully');
-        
-        // Initialize background task service
-        console.log('🔄 Initializing background task service...');
-        await backgroundTaskService.initialize();
-        
-        // Check for missed notifications after initialization
-        try {
-          await checkAndScheduleMissedNotifications();
-          console.log('✅ Missed notifications check completed');
-        } catch (error) {
-          console.error('❌ Failed to check missed notifications:', error);
+      // 🌐 Skip notification services initialization for web platform
+      if (Platform.OS !== 'web') {
+        // Initialize enhanced notification service
+        console.log('🔔 Initializing enhanced notification service...');
+        const notificationInitialized = await notificationService.initialize();
+        if (notificationInitialized) {
+          console.log('✅ Enhanced notification service initialized successfully');
+          
+          // Initialize background task service
+          console.log('🔄 Initializing background task service...');
+          await backgroundTaskService.initialize();
+          
+          // Check for missed notifications after initialization
+          try {
+            await checkAndScheduleMissedNotifications();
+            console.log('✅ Missed notifications check completed');
+          } catch (error) {
+            console.error('❌ Failed to check missed notifications:', error);
+          }
+        } else {
+          console.log('⚠️ Enhanced notification service not available (this is normal in simulators)');
         }
       } else {
-        console.log('⚠️ Enhanced notification service not available (this is normal in simulators)');
+        console.log('🌐 Skipping notification services initialization for web platform');
       }
 
       // Check authentication status

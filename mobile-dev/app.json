@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Petly: Your Assistant",
-    "slug": "petly-assistant",
-    "version": "1.0.0",
+    "name": "Petly Assistant",
+    "slug": "vetly-ai",
+    "version": "1.0.1",
     "description": "Your smart companion for pet care, activity tracking, and daily routines",
     "orientation": "portrait",
     "icon": "./assets/vetly-logo.png",
@@ -21,7 +21,7 @@
         "NSUserNotificationsUsageDescription": "Petly needs notifications to remind you about your pet's daily activities and care routines.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.tabchny.petlyassistant"
+      "bundleIdentifier": "com.tabchny.vetlyai"
     },
     "android": {
       "adaptiveIcon": {
@@ -33,9 +33,11 @@
         "VIBRATE",
         "WAKE_LOCK",
         "SCHEDULE_EXACT_ALARM",
-        "USE_EXACT_ALARM"
+        "USE_EXACT_ALARM",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.WAKE_LOCK"
       ],
-      "package": "com.tabchny.petlyassistant"
+      "package": "com.tabchny.vetlyai"
     },
     "web": {
       "favicon": "./assets/vetly-logo.png"
@@ -58,8 +60,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "de423890-a568-4126-8616-611917f88602"
+        "projectId": "1b467ab6-4e62-4001-b4e1-4e73b25e0cdc"
       }
-    }
+    },
+    "owner": "tabchny"
   }
 }

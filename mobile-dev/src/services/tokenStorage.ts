@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 /**
  * Secure Token Storage Service
@@ -10,58 +11,69 @@ class TokenStorage {
   private readonly REFRESH_TOKEN_KEY = 'refresh_token';
   private readonly USER_KEY = 'user';
 
-  // 🔐 Access Token (stored securely)
-  async getAccessToken(): Promise<string | null> {
+  // 🌐 Platform-specific secure storage methods
+  private async getSecureItem(key: string): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(this.ACCESS_TOKEN_KEY);
+      if (Platform.OS === 'web') {
+        return localStorage.getItem(key);
+      } else {
+        return await SecureStore.getItemAsync(key);
+      }
     } catch (error) {
-      console.error('Failed to get access token:', error);
+      console.error(`Failed to get secure item ${key}:`, error);
       return null;
     }
   }
 
-  async setAccessToken(token: string): Promise<void> {
+  private async setSecureItem(key: string, value: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync(this.ACCESS_TOKEN_KEY, token);
+      if (Platform.OS === 'web') {
+        localStorage.setItem(key, value);
+      } else {
+        await SecureStore.setItemAsync(key, value);
+      }
     } catch (error) {
-      console.error('Failed to set access token:', error);
+      console.error(`Failed to set secure item ${key}:`, error);
       throw error;
     }
   }
 
-  async removeAccessToken(): Promise<void> {
+  private async removeSecureItem(key: string): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(this.ACCESS_TOKEN_KEY);
+      if (Platform.OS === 'web') {
+        localStorage.removeItem(key);
+      } else {
+        await SecureStore.deleteItemAsync(key);
+      }
     } catch (error) {
-      console.error('Failed to remove access token:', error);
+      console.error(`Failed to remove secure item ${key}:`, error);
     }
+  }
+
+  // 🔐 Access Token (stored securely)
+  async getAccessToken(): Promise<string | null> {
+    return await this.getSecureItem(this.ACCESS_TOKEN_KEY);
+  }
+
+  async setAccessToken(token: string): Promise<void> {
+    await this.setSecureItem(this.ACCESS_TOKEN_KEY, token);
+  }
+
+  async removeAccessToken(): Promise<void> {
+    await this.removeSecureItem(this.ACCESS_TOKEN_KEY);
   }
 
   // 🔐 Refresh Token (stored securely)
   async getRefreshToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(this.REFRESH_TOKEN_KEY);
-    } catch (error) {
-      console.error('Failed to get refresh token:', error);
-      return null;
-    }
+    return await this.getSecureItem(this.REFRESH_TOKEN_KEY);
   }
 
   async setRefreshToken(token: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(this.REFRESH_TOKEN_KEY, String(token));
-    } catch (error) {
-      console.error('Failed to set refresh token:', error);
-      throw error;
-    }
+    await this.setSecureItem(this.REFRESH_TOKEN_KEY, String(token));
   }
 
   async removeRefreshToken(): Promise<void> {
-    try {
-      await SecureStore.deleteItemAsync(this.REFRESH_TOKEN_KEY);
-    } catch (error) {
-      console.error('Failed to remove refresh token:', error);
-    }
+    await this.removeSecureItem(this.REFRESH_TOKEN_KEY);
   }
 
   // 👤 User Data (can use AsyncStorage for non-sensitive data)

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { 
   ExtensionModalData, 
@@ -56,6 +56,12 @@ export const useExtensionModal = () => {
    * Настраивает слушатели уведомлений
    */
   const setupNotificationListeners = useCallback(() => {
+    // 🌐 Skip notification listeners setup for web platform
+    if (Platform.OS === 'web') {
+      console.log('🌐 Skipping notification listeners setup for web platform');
+      return () => {}; // Return empty cleanup function
+    }
+
     // Слушатель нажатий на уведомления
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;

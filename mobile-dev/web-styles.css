@@ -1,0 +1,92 @@
+/* 🌐 Глобальные стили для веб-версии Vetly App */
+
+/* Убираем дефолтные отступы и устанавливаем фиксированную ширину */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden; /* Убираем горизонтальный скролл */
+  overflow-y: auto;   /* Разрешаем вертикальный скролл */
+  position: fixed;    /* Фиксируем позицию для предотвращения тряски */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* React Native Web корневой элемент */
+div[data-reactroot] {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Контейнеры ScrollView */
+div[data-reactroot] > div {
+  width: 100% !important;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+}
+
+/* Убираем horizontal scroll для всех потомков */
+div[data-reactroot] * {
+  max-width: 100% !important;
+}
+
+/* Стилизуем скроллбар */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Предотвращаем выход элементов за границы экрана */
+.prevent-overflow {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  word-wrap: break-word;
+}
+
+/* Адаптивные отступы для мобильного вида */
+@media (max-width: 768px) {
+  body {
+    padding: 0;
+    margin: 0;
+  }
+}
+
+/* Плавные переходы */
+* {
+  transition: none !important; /* Убираем все transitions чтобы избежать тряски */
+}
+
+/* Фиксируем width для input элементов */
+input, textarea, select {
+  max-width: 100% !important;
+  box-sizing: border-box;
+} 

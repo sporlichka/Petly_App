@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { ActivityRecordCreate, ActivityRecord } from '../types';
 import { apiService } from './api';
 import { notificationService } from './notificationService';
@@ -395,6 +396,12 @@ export function getRepeatSummary(
  * Проверяет и планирует пропущенные уведомления
  */
 export async function checkAndScheduleMissedNotifications(): Promise<void> {
+  // 🌐 Skip missed notifications check for web platform
+  if (Platform.OS === 'web') {
+    console.log('🌐 Skipping missed notifications check for web platform');
+    return;
+  }
+
   try {
     console.log('🔍 Checking for missed notifications in repeat service...');
     

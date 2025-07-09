@@ -1,6 +1,6 @@
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 import { notificationService } from './notificationService';
 import { checkAndScheduleMissedNotifications } from './repeatActivityService';
 import { apiService } from './api';
@@ -22,6 +22,13 @@ export class BackgroundTaskService {
 
   async initialize(): Promise<boolean> {
     if (this.isInitialized) {
+      return true;
+    }
+
+    // 🌐 Skip background task initialization for web platform
+    if (Platform.OS === 'web') {
+      console.log('🌐 Skipping background task service initialization for web platform');
+      this.isInitialized = true;
       return true;
     }
 
