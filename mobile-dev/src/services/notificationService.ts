@@ -361,7 +361,7 @@ export class NotificationService {
       case 'FEEDING':
         return i18n.t('activity.notifications.feeding_title', { petName: pet });
       case 'CARE':
-        return i18n.t('activity.notifications.health_title', { petName: pet });
+        return i18n.t('activity.notifications.care_title', { petName: pet });
       case 'ACTIVITY':
         return i18n.t('activity.notifications.activity_title', { petName: pet });
       default:
@@ -382,7 +382,7 @@ export class NotificationService {
         });
         break;
       case 'CARE':
-        body = i18n.t('activity.notifications.health_body', { petName: pet });
+        body = i18n.t('activity.notifications.care_body', { petName: pet });
         break;
       case 'ACTIVITY':
         body = i18n.t('activity.notifications.activity_body', { 

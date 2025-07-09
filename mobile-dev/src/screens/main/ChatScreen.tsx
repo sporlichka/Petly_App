@@ -13,6 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import Markdown from 'react-native-markdown-display';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
@@ -27,6 +28,7 @@ export const ChatScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const flatListRef = useRef<FlatList>(null);
+  const tabBarHeight = useBottomTabBarHeight();
   const suggestionChips = t('chat.suggestions', { returnObjects: true }) as string[];
 
   useEffect(() => {
@@ -235,30 +237,28 @@ export const ChatScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.fullContainer} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <SafeAreaView style={styles.container} edges={['top']}>
-        {/* Header Card */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.headerAvatar}>
-              <Text style={styles.headerAvatarText}>🤖</Text>
-            </View>
-            <View>
-              <Text style={styles.headerTitle}>{t('chat.title')}</Text>
-              <Text style={styles.headerSubtitle}>{t('chat.subtitle')}</Text>
-            </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header Card */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.headerAvatar}>
+            <Text style={styles.headerAvatarText}>🤖</Text>
           </View>
-          
-          <TouchableOpacity onPress={clearChat} style={styles.clearButton}>
-            <Text style={styles.clearButtonText}>{t('chat.clear')}</Text>
-          </TouchableOpacity>
+          <View>
+            <Text style={styles.headerTitle}>{t('chat.title')}</Text>
+            <Text style={styles.headerSubtitle}>{t('chat.subtitle')}</Text>
+          </View>
         </View>
+        <TouchableOpacity onPress={clearChat} style={styles.clearButton}>
+          <Text style={styles.clearButtonText}>{t('chat.clear')}</Text>
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.chatContainer}>
+      <KeyboardAvoidingView 
+        style={styles.chatContainer} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+      >
         {/* Messages */}
         <FlatList
           ref={flatListRef}
@@ -266,7 +266,10 @@ export const ChatScreen: React.FC = () => {
           keyExtractor={item => item.id}
           renderItem={renderMessage}
           style={styles.messagesList}
-          contentContainerStyle={styles.messagesContent}
+          contentContainerStyle={[
+            styles.messagesContent,
+            Platform.OS === 'android' && { paddingBottom: tabBarHeight}
+          ]}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
           showsVerticalScrollIndicator={false}
         />
@@ -274,48 +277,55 @@ export const ChatScreen: React.FC = () => {
         {/* Suggestion Chips (only show when no messages or just welcome) */}
         {messages.length <= 1 && renderSuggestionChips()}
 
-          {/* Input Area */}
-          <View style={styles.inputContainer}>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                value={currentMessage}
-                onChangeText={setCurrentMessage}
-                placeholder={t('chat.placeholder')}
-                placeholderTextColor={Colors.textSecondary}
-                multiline
-                maxLength={1000}
-                onSubmitEditing={() => sendMessage()}
-                blurOnSubmit={false}
-              />
-              
-              <TouchableOpacity
-                style={[
-                  styles.sendButton,
-                  (!currentMessage.trim() || isLoading) && styles.sendButtonDisabled
-                ]}
-                onPress={() => sendMessage()}
-                disabled={!currentMessage.trim() || isLoading}
-              >
-                <Text style={styles.sendButtonText}>
-                  {isLoading ? '⏳' : '➤'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+        {/* Input Area */}
+        <View style={styles.inputContainer}>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.textInput}
+              value={currentMessage}
+              onChangeText={setCurrentMessage}
+              placeholder={t('chat.placeholder')}
+              placeholderTextColor={Colors.textSecondary}
+              multiline
+              maxLength={1000}
+              onSubmitEditing={() => sendMessage()}
+              blurOnSubmit={false}
+            />
+
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                (!currentMessage.trim() || isLoading) && styles.sendButtonDisabled
+              ]}
+              onPress={() => sendMessage()}
+              disabled={!currentMessage.trim() || isLoading}
+            >
+              <Text style={styles.sendButtonText}>
+                {isLoading ? '⏳' : '➤'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  fullContainer: {
-    flex: 1,
-  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+
+  inputContainer: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  messagesList: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -379,9 +389,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   chatContainer: {
-    flex: 1,
-  },
-  messagesList: {
     flex: 1,
   },
   messagesContent: {
@@ -494,13 +501,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.primary,
     fontWeight: '500',
-  },
-  inputContainer: {
-    backgroundColor: Colors.surface,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
   },
   inputWrapper: {
     flexDirection: 'row',

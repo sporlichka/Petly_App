@@ -37,7 +37,7 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.WAKE_LOCK"
       ],
-      "package": "com.tabchny.vetlyai"
+      "package": "com.tabchny.vetlyai",
     },
     "web": {
       "favicon": "./assets/vetly-logo.png"

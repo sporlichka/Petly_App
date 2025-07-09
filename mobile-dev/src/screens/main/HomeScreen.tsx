@@ -132,7 +132,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.petInfo}>
             <Text style={styles.petName}>{pet.name}</Text>
             <Text style={styles.petSpecies}>
-              {pet.gender} {pet.species}
+              {t(`pets.${pet.gender.toLowerCase()}`)} {pet.species}
             </Text>
             {pet.breed && <Text style={styles.petBreed}>{pet.breed}</Text>}
           </View>
