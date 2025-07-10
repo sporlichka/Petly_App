@@ -13,7 +13,8 @@ jobs:
     steps:
       - name: 🧹 Cleanup all __pycache__ folders before checkout
         run: |
-          sudo find /home/Tabchny/actions-runner/_work/Vetly-AI-Backend -name '__pycache__' -type d -exec rm -rf {} + || true
+          sudo find /home/Tabchny/actions-runner/_work/Petly_App -name '__pycache__' -type d -exec sudo rm -rf {} + || true
+          sudo find /home/Tabchny/actions-runner/_work/Petly_App -name '*.pyc' -exec sudo rm -f {} + || true
 
       - name: 📦 Checkout repository
         uses: actions/checkout@v4
@@ -51,6 +52,10 @@ jobs:
           echo "🛑 Stopping existing containers..."
           sudo docker compose down --remove-orphans || true
           sudo docker system prune -f || true
+
+      - name: 🧹 Fix permissions after stopping containers
+        run: |
+          sudo chown -R $USER:$USER /home/Tabchny/actions-runner/_work/Petly_App
 
       - name: 🔨 Build and start containers
         run: |
