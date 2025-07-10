@@ -13,7 +13,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import Markdown from 'react-native-markdown-display';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
@@ -28,7 +27,6 @@ export const ChatScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const flatListRef = useRef<FlatList>(null);
-  const tabBarHeight = useBottomTabBarHeight();
   const suggestionChips = t('chat.suggestions', { returnObjects: true }) as string[];
 
   useEffect(() => {
@@ -256,8 +254,8 @@ export const ChatScreen: React.FC = () => {
 
       <KeyboardAvoidingView 
         style={styles.chatContainer} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
       >
         {/* Messages */}
         <FlatList
@@ -266,10 +264,7 @@ export const ChatScreen: React.FC = () => {
           keyExtractor={item => item.id}
           renderItem={renderMessage}
           style={styles.messagesList}
-          contentContainerStyle={[
-            styles.messagesContent,
-            Platform.OS === 'android' && { paddingBottom: tabBarHeight}
-          ]}
+          contentContainerStyle={styles.messagesContent}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
           showsVerticalScrollIndicator={false}
         />

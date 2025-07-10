@@ -46,6 +46,7 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
         },
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSecondary,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: Colors.surface,
           borderTopColor: Colors.borderLight,
@@ -67,31 +68,6 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
         options={{
           tabBarLabel: t('home.title'),
         }}
-        listeners={({ navigation }) => ({
-          state: (e) => {
-            // Hide tab bar when navigating to nested screens
-            const state = navigation.getState();
-            const homeRoute = state.routes.find(route => route.name === 'Home');
-            const homeState = homeRoute?.state;
-            
-            if (homeState && homeState.index !== undefined && homeState.index > 0) {
-              navigation.setOptions({
-                tabBarStyle: { display: 'none' },
-              });
-            } else {
-              navigation.setOptions({
-                tabBarStyle: {
-                  backgroundColor: Colors.surface,
-                  borderTopColor: Colors.borderLight,
-                  borderTopWidth: 1,
-                  paddingBottom: Math.max(insets.bottom, 5),
-                  paddingTop: 5,
-                  height: 60 + Math.max(insets.bottom - 5, 0),
-                },
-              });
-            }
-          },
-        })}
       />
       <Tab.Screen 
         name="Calendar"

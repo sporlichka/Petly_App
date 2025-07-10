@@ -24,6 +24,7 @@
       "bundleIdentifier": "com.tabchny.vetlyai"
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/vetly-logo.png",
         "backgroundColor": "#FFC107"
