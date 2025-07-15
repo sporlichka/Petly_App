@@ -22,10 +22,20 @@ def upgrade() -> None:
     """Upgrade schema."""
     repeattype = sa.Enum('NONE', 'DAY', 'WEEK', 'MONTH', 'YEAR', name='repeattype')
     repeattype.create(op.get_bind(), checkfirst=True)
-    op.add_column('activity_records', sa.Column('repeat_type', repeattype, nullable=False))
-    op.add_column('activity_records', sa.Column('repeat_interval', sa.Integer(), nullable=False))
+    
+    # Добавляем колонки как nullable сначала
+    op.add_column('activity_records', sa.Column('repeat_type', repeattype, nullable=True))
+    op.add_column('activity_records', sa.Column('repeat_interval', sa.Integer(), nullable=True))
     op.add_column('activity_records', sa.Column('repeat_end_date', sa.DateTime(), nullable=True))
     op.add_column('activity_records', sa.Column('repeat_count', sa.Integer(), nullable=True))
+    
+    # Устанавливаем значения по умолчанию для существующих записей
+    op.execute("UPDATE activity_records SET repeat_type = 'NONE', repeat_interval = 1 WHERE repeat_type IS NULL")
+    
+    # Делаем колонки NOT NULL
+    op.alter_column('activity_records', 'repeat_type', nullable=False)
+    op.alter_column('activity_records', 'repeat_interval', nullable=False)
+    
     op.alter_column('activity_records', 'category',
                existing_type=postgresql.ENUM('FEEDING', 'CARE', 'ACTIVITY', name='activitycategory'),
                nullable=False)
