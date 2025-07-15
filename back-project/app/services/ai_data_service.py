@@ -11,7 +11,8 @@ class PetInfo(BaseModel):
     breed: str
     gender: str
     age: int  # in years
-    weight: float  # in kg
+    weight: float
+    weight_unit: str  # "kg" or "lb"
     notes: str
 
 
@@ -31,6 +32,7 @@ def get_user_pets(db: Session, user_id: int) -> List[PetInfo]:
             gender=pet.gender.value if pet.gender else "Unknown",
             age=calculate_age(pet.birthdate),
             weight=pet.weight,
+            weight_unit=pet.weight_unit or "kg",
             notes=pet.notes or ""
         )
         for pet in pets

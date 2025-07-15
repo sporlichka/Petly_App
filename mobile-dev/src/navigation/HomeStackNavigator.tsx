@@ -9,6 +9,7 @@ import { PetDetailScreen } from '../screens/main/PetDetailScreen';
 import { AddPetScreen } from '../screens/main/AddPetScreen';
 import { EditPetScreen } from '../screens/main/EditPetScreen';
 import { ViewAllActivitiesScreen } from '../screens/main/ViewAllActivitiesScreen';
+import { PetSpeciesPickerScreen } from '../screens/activity/PetSpeciesPickerScreen';
 import { ActivityStackNavigator } from './ActivityStackNavigator';
 
 const Stack = createStackNavigator<HomeStackParamList>();
@@ -46,6 +47,13 @@ export const HomeStackNavigator: React.FC = () => {
         options={{
           title: t('navigation.pet_details'),
           headerShown: true,
+        }}
+      />
+      <Stack.Screen 
+        name="PetSpeciesPicker" 
+        component={PetSpeciesPickerScreen}
+        options={{
+          headerShown: false,
         }}
       />
       <Stack.Screen 

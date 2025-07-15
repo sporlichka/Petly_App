@@ -200,6 +200,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
     }
   };
 
+
+
   const handleLogout = () => {
     Alert.alert(
       'Logout',
@@ -384,20 +386,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
           <Text style={styles.sectionTitle}>{t('settings.nots')}</Text>
           
           {notificationEnabled && (
-            <Card style={styles.settingCard} onPress={handleDisableAllNotifications}>
-              <View style={styles.settingRow}>
-                <View style={styles.settingLeft}>
-                  <Ionicons name="notifications-off-outline" size={24} color={Colors.error} />
-                  <View style={styles.notificationInfo}>
-                    <Text style={[styles.settingText, { color: Colors.error }]}>{t('settings.disable_all_notifications')}</Text>
-                    <Text style={styles.notificationSubtext}>
-                      {t('settings.reminders_scheduled', { count: scheduledCount })}
-                    </Text>
+            <>
+              <Card style={styles.settingCard} onPress={handleDisableAllNotifications}>
+                <View style={styles.settingRow}>
+                  <View style={styles.settingLeft}>
+                    <Ionicons name="notifications-off-outline" size={24} color={Colors.error} />
+                    <View style={styles.notificationInfo}>
+                      <Text style={[styles.settingText, { color: Colors.error }]}>{t('settings.disable_all_notifications')}</Text>
+                      <Text style={styles.notificationSubtext}>
+                        {t('settings.reminders_scheduled', { count: scheduledCount })}
+                      </Text>
+                    </View>
                   </View>
+                  <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
-              </View>
-            </Card>
+              </Card>
+              
+
+            </>
           )}
           {!notificationEnabled && (
             <Button
@@ -473,8 +479,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appTitle}>Petly</Text>
-          <Text style={styles.appVersion}>Version 1.0.0</Text>
+          <Text style={styles.appTitle}>Petly Assistant</Text>
+          <Text style={styles.appVersion}>Version 1.0.2</Text>
           <Text style={styles.appDescription}>
             Your smart companion for pet care, activity tracking, and daily routines
           </Text>

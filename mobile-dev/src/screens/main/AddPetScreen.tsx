@@ -15,30 +15,45 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { HomeStackParamList, PetCreate, PetFormData, PetGender } from '../../types';
+import { HomeStackParamList, PetCreate, PetFormData, PetGender, WeightUnit } from '../../types';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
 import { GenderPicker } from '../../components/GenderPicker';
+import { WeightUnitPicker } from '../../components/WeightUnitPicker';
 import { DateTimePickerModal } from '../../components/DateTimePickerModal';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
+import { trackEvent } from '../../services/mixpanelService';
+import { useSpeciesUtils } from '../../utils/speciesUtils';
 
 type AddPetScreenNavigationProp = StackNavigationProp<HomeStackParamList, 'AddPet'>;
 
 interface AddPetScreenProps {
   navigation: AddPetScreenNavigationProp;
+  route: {
+    params: {
+      species?: string;
+      allowSpeciesEdit?: boolean;
+      fromScreen?: string;
+      isOnboarding?: boolean;
+    };
+  };
 }
 
-export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
+export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation, route }) => {
   const { t, i18n } = useTranslation();
+  const { getSpeciesIcon } = useSpeciesUtils();
+  const { species, allowSpeciesEdit = false, fromScreen, isOnboarding = false } = route.params || {};
+  
   const [formData, setFormData] = useState<PetFormData>({
     name: '',
-    species: '',
+    species: species || '',
     breed: '',
     gender: 'Male',
     birthdate: new Date(),
     weight: '',
+    weight_unit: 'kg',
     notes: '',
   });
   const [errors, setErrors] = useState<Partial<PetFormData>>({});
@@ -46,13 +61,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const getPetEmoji = (species: string) => {
-    const s = species.trim().toLowerCase();
-    if (['dog', 'собака'].includes(s)) return '🐕';
-    if (['cat', 'кошка', 'кот'].includes(s)) return '🐱';
-    if (['bird', 'птица'].includes(s)) return '🐦';
-    if (['rabbit', 'кролик'].includes(s)) return '🐰';
-    if (['fish', 'рыба'].includes(s)) return '🐟';
-    return '🐾';
+    return getSpeciesIcon(species);
   };
 
   const validateForm = (): boolean => {
@@ -86,10 +95,20 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
         gender: formData.gender,
         birthdate: formData.birthdate.toISOString().split('T')[0], // Convert to YYYY-MM-DD format
         weight: parseFloat(formData.weight),
+        weight_unit: formData.weight_unit,
         notes: formData.notes.trim() || undefined,
       };
 
       await apiService.createPet(petData);
+      
+      // Track pet addition event
+      trackEvent("adding the pet", {
+        "Pet Species": formData.species,
+        "Pet Gender": formData.gender,
+        "Pet Weight Unit": formData.weight_unit,
+        "OS": Platform.OS, // "ios" или "android"
+        "Pet Name": formData.name
+      });
       
       // Show success message and navigate back to pet list
       Alert.alert(
@@ -99,7 +118,21 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
           {
             text: t('common.ok'),
             onPress: () => {
-              navigation.goBack();
+              // Navigate based on where user came from
+              if (fromScreen === 'PetSpeciesPicker') {
+                // If came from species picker, reset to PetList to clear the stack
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'PetList' }],
+                });
+              } else if (isOnboarding) {
+                // If in onboarding, we need to handle this differently
+                // For now, just go back
+                navigation.goBack();
+              } else {
+                // Default: go back to previous screen
+                navigation.goBack();
+              }
             }
           }
         ]
@@ -115,11 +148,11 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
     }
   };
 
-  const updateFormData = (field: keyof PetFormData, value: string | Date | PetGender) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const updateFormData = (field: keyof PetFormData, value: string | Date | PetGender | WeightUnit) => {
+    setFormData((prev: PetFormData) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev: Partial<PetFormData>) => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -183,17 +216,33 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
                 }
               />
 
-              <Input
-                label={t('pet_form.species_label')}
-                placeholder={t('pet_form.species_placeholder')}
-                value={formData.species}
-                onChangeText={(text) => updateFormData('species', text)}
-                error={errors.species}
-                autoCapitalize="words"
-                leftIcon={
+              {/* Species Selection */}
+              <View style={styles.speciesContainer}>
+                <Text style={styles.inputLabel}>{t('pet_form.species_label')}</Text>
+                <TouchableOpacity
+                  style={[styles.speciesButton, errors.species && styles.errorInput]}
+                  onPress={() => {
+                    if (allowSpeciesEdit) {
+                      navigation.navigate('PetSpeciesPicker', {
+                        fromScreen: 'AddPet',
+                        isOnboarding
+                      });
+                    }
+                  }}
+                  disabled={!allowSpeciesEdit}
+                >
                   <Ionicons name="paw-outline" size={20} color={Colors.textSecondary} />
-                }
-              />
+                  <Text style={[styles.speciesText, !formData.species && styles.placeholderText]}>
+                    {formData.species || t('pet_form.species_placeholder')}
+                  </Text>
+                  {allowSpeciesEdit && (
+                    <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+                  )}
+                </TouchableOpacity>
+                {errors.species && (
+                  <Text style={styles.errorText}>{errors.species}</Text>
+                )}
+              </View>
 
               <GenderPicker
                 label={t('pet_form.gender_label')}
@@ -250,6 +299,15 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
                 leftIcon={
                   <Ionicons name="scale-outline" size={20} color={Colors.textSecondary} />
                 }
+              />
+
+              <WeightUnitPicker
+                label={t('pet_form.weight_unit_label')}
+                value={formData.weight_unit}
+                onValueChange={(unit) => updateFormData('weight_unit', unit)}
+                error={errors.weight_unit}
+                kgLabel="kg"
+                lbLabel="lb"
               />
 
               <Input
@@ -340,6 +398,36 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 8,
     color: Colors.text,
+  },
+  speciesContainer: {
+    marginBottom: 16,
+  },
+  speciesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 48,
+  },
+  speciesText: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
+    marginLeft: 12,
+  },
+  placeholderText: {
+    color: Colors.textLight,
+  },
+  errorInput: {
+    borderColor: Colors.error,
+  },
+  errorText: {
+    fontSize: 12,
+    color: Colors.error,
+    marginTop: 4,
   },
   datePickerButton: {
     flexDirection: 'row',

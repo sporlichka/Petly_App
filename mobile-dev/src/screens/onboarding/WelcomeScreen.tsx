@@ -24,7 +24,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
   const { t, i18n } = useTranslation();
 
   const handleGetStarted = () => {
-    navigation.navigate('AddPet');
+    navigation.navigate('PetSpeciesPicker', {
+      fromScreen: 'Welcome',
+      isOnboarding: true
+    });
   };
 
   return (

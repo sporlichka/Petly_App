@@ -244,7 +244,8 @@ export class NotificationService {
         id: activity.id,
         date: activity.date,
         parsedDate: triggerDate.toISOString(),
-        repeat: activity.repeat,
+        repeat_type: activity.repeat_type,
+        repeat_interval: activity.repeat_interval,
         notify: activity.notify,
         petName
       });
@@ -281,6 +282,18 @@ export class NotificationService {
         content: notificationContent,
         trigger,
       });
+
+      // Для кастомных интервалов добавляем информацию в data
+      if (activity.repeat_type && activity.repeat_type !== 'none' && activity.repeat_interval > 1) {
+        notificationContent.data = {
+          ...notificationContent.data,
+          customInterval: true,
+          repeatType: activity.repeat_type,
+          repeatInterval: activity.repeat_interval,
+          repeatEndDate: activity.repeat_end_date,
+          repeatCount: activity.repeat_count,
+        };
+      }
 
       // Store the notification ID
       await this.saveNotificationId(activity.id, notificationId, triggerDate, petName);
@@ -371,61 +384,71 @@ export class NotificationService {
 
   private createNotificationBody(activity: ActivityRecord, petName?: string): string {
     const pet = petName || 'your pet';
-    
     let body = '';
-    
     switch (activity.category) {
-      case 'FEEDING':
-        body = i18n.t('activity.notifications.feeding_body', { 
+      case 'FEEDING': {
+        const foodTypePart = activity.food_type ? ` (${activity.food_type})` : '';
+        body = i18n.t('activity.notifications.feeding_body', {
           petName: pet,
-          foodType: activity.food_type 
+          foodTypePart
         });
         break;
+      }
       case 'CARE':
         body = i18n.t('activity.notifications.care_body', { petName: pet });
         break;
-      case 'ACTIVITY':
-        body = i18n.t('activity.notifications.activity_body', { 
+      case 'ACTIVITY': {
+        const durationPart = activity.duration ? ` (${activity.duration})` : '';
+        body = i18n.t('activity.notifications.activity_body', {
           petName: pet,
-          duration: activity.duration 
+          durationPart
         });
         break;
+      }
       default:
         body = i18n.t('activity.notifications.general_body', { petName: pet });
     }
-
     if (activity.notes && activity.notes.trim()) {
       body += `\n\n${activity.notes}`;
     }
-
     return body;
   }
 
   private createTrigger(activity: ActivityRecord, triggerDate: Date): Notifications.NotificationTriggerInput {
-    console.log(`🎯 Creating trigger for activity ${activity.id}, repeat: ${activity.repeat}`);
+    console.log(`🎯 Creating trigger for activity ${activity.id}, repeat_type: ${activity.repeat_type}, repeat_interval: ${activity.repeat_interval}`);
     
-    // Handle repeat notifications
-    if (activity.repeat && activity.repeat !== 'none') {
-      switch (activity.repeat) {
-        case 'daily':
+    // Если нет повторов или интервал = 1, используем стандартные триггеры
+    if (!activity.repeat_type || activity.repeat_type === 'none' || activity.repeat_interval === 1) {
+      switch (activity.repeat_type) {
+        case 'day':
           return {
             type: Notifications.SchedulableTriggerInputTypes.DAILY,
             hour: triggerDate.getHours(),
             minute: triggerDate.getMinutes(),
           };
-        case 'weekly':
+        case 'week':
           return {
             type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-            weekday: triggerDate.getDay() + 1, // Expo uses 1-7, JS uses 0-6
+            weekday: triggerDate.getDay() + 1,
             hour: triggerDate.getHours(),
             minute: triggerDate.getMinutes(),
           };
-        case 'monthly':
-          // For monthly, we'll use a one-time notification and let the user reschedule
+        case 'month':
           return {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: triggerDate,
+            type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
+            day: triggerDate.getDate(),
+            hour: triggerDate.getHours(),
+            minute: triggerDate.getMinutes(),
           };
+        case 'year':
+          return {
+            type: Notifications.SchedulableTriggerInputTypes.YEARLY,
+            month: triggerDate.getMonth() + 1,
+            day: triggerDate.getDate(),
+            hour: triggerDate.getHours(),
+            minute: triggerDate.getMinutes(),
+          };
+        case 'none':
         default:
           return {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -433,8 +456,10 @@ export class NotificationService {
           };
       }
     }
-
-    // One-time notification
+    
+    // Для кастомных интервалов (например, каждые 3 дня) создаем только одно уведомление
+    // и будем пересоздавать его вручную через background task
+    console.log(`⚠️ Custom interval ${activity.repeat_interval} not supported by Expo, creating single notification`);
     return {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: triggerDate,
@@ -565,8 +590,11 @@ export class NotificationService {
             const scheduledDate = new Date(mapping.scheduledDate);
             if (scheduledDate < now) {
               console.log(`⚠️ Found missed notification for activity ${data.activityId}`);
-              // Reschedule for next occurrence if it's a repeating activity
-              // This would require fetching the activity from API
+              
+              // Если это кастомный интервал, пересоздаем уведомление
+              if (data.customInterval) {
+                await this.rescheduleCustomIntervalNotification(notification, data);
+              }
             }
           }
         }
@@ -574,6 +602,90 @@ export class NotificationService {
     } catch (error) {
       console.error('Failed to check missed notifications:', error);
     }
+  }
+
+  private async rescheduleCustomIntervalNotification(
+    notification: Notifications.NotificationRequest, 
+    data: any
+  ): Promise<void> {
+    try {
+      // Отменяем старое уведомление
+      await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+      
+      // Вычисляем следующую дату
+      const lastDate = new Date();
+      if (notification.trigger && 'date' in notification.trigger && notification.trigger.date) {
+        const triggerDate = notification.trigger.date;
+        if (triggerDate instanceof Date) {
+          lastDate.setTime(triggerDate.getTime());
+        } else if (typeof triggerDate === 'number') {
+          lastDate.setTime(triggerDate);
+        }
+      }
+      
+      const nextDate = this.calculateNextCustomIntervalDate(
+        lastDate,
+        data.repeatType,
+        data.repeatInterval,
+        data.repeatEndDate,
+        data.repeatCount
+      );
+      
+      if (nextDate && nextDate > new Date()) {
+        // Создаем новое уведомление
+        const newNotification: Notifications.NotificationRequestInput = {
+          content: {
+            title: notification.content.title,
+            body: notification.content.body,
+            data: notification.content.data,
+            sound: notification.content.sound || 'default',
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: nextDate,
+          },
+        };
+        
+        const newNotificationId = await Notifications.scheduleNotificationAsync(newNotification);
+        console.log(`🔄 Rescheduled custom interval notification ${newNotificationId} for ${nextDate.toISOString()}`);
+      }
+    } catch (error) {
+      console.error('Failed to reschedule custom interval notification:', error);
+    }
+  }
+
+  private calculateNextCustomIntervalDate(
+    lastDate: Date,
+    repeatType: string,
+    repeatInterval: number,
+    repeatEndDate?: string,
+    repeatCount?: number
+  ): Date | null {
+    const nextDate = new Date(lastDate);
+    
+    switch (repeatType) {
+      case 'day':
+        nextDate.setDate(nextDate.getDate() + repeatInterval);
+        break;
+      case 'week':
+        nextDate.setDate(nextDate.getDate() + (repeatInterval * 7));
+        break;
+      case 'month':
+        nextDate.setMonth(nextDate.getMonth() + repeatInterval);
+        break;
+      case 'year':
+        nextDate.setFullYear(nextDate.getFullYear() + repeatInterval);
+        break;
+      default:
+        return null;
+    }
+    
+    // Проверяем ограничения
+    if (repeatEndDate && nextDate > new Date(repeatEndDate)) {
+      return null;
+    }
+    
+    return nextDate;
   }
 
   async cleanupExpiredNotifications(): Promise<void> {
@@ -636,6 +748,31 @@ export class NotificationService {
     } catch (error) {
       console.error('Failed to get scheduled notifications count:', error);
       return 0;
+    }
+  }
+
+  async getScheduledNotificationsInfo(): Promise<{ count: number; notifications: any[] }> {
+    // 🌐 Skip for web platform
+    if (Platform.OS === 'web') {
+      return { count: 0, notifications: [] };
+    }
+
+    try {
+      const notifications = await Notifications.getAllScheduledNotificationsAsync();
+      console.log(`📋 Found ${notifications.length} scheduled notifications`);
+      
+      const notificationsInfo = notifications.map(notification => ({
+        id: notification.identifier,
+        title: notification.content.title,
+        body: notification.content.body,
+        data: notification.content.data,
+        trigger: notification.trigger,
+      }));
+      
+      return { count: notifications.length, notifications: notificationsInfo };
+    } catch (error) {
+      console.error('❌ Failed to get scheduled notifications info:', error);
+      return { count: 0, notifications: [] };
     }
   }
 

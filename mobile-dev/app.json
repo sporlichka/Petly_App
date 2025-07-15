@@ -2,7 +2,7 @@
   "expo": {
     "name": "Petly Assistant",
     "slug": "vetly-ai",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Your smart companion for pet care, activity tracking, and daily routines",
     "orientation": "portrait",
     "icon": "./assets/vetly-logo.png",

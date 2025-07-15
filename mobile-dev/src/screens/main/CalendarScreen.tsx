@@ -18,7 +18,8 @@ import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
 import { Colors } from '../../constants/Colors';
-import { ActivityRecord, Pet, ActivityCategory, MainTabParamList, HomeStackParamList } from '../../types';
+import { ActivityRecord, VirtualActivityRecord, Pet, ActivityCategory, MainTabParamList, HomeStackParamList } from '../../types';
+import { isVirtualActivity, getVirtualActivityRepeatDescription } from '../../services/virtualActivityService';
 import { apiService } from '../../services/api';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
@@ -84,8 +85,8 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
-  const [activities, setActivities] = useState<ActivityRecord[]>([]);
-  const [allActivities, setAllActivities] = useState<ActivityRecord[]>([]);
+  const [activities, setActivities] = useState<VirtualActivityRecord[]>([]);
+  const [allActivities, setAllActivities] = useState<VirtualActivityRecord[]>([]);
   const [markedDates, setMarkedDates] = useState<MarkedDates>({});
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,8 +180,14 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
 
   const loadActivitiesForDate = async (dateStr: string) => {
     try {
-      // Use the new optimized API call for specific date
-      const dateActivities = await apiService.getActivityRecordsByDate(dateStr);
+      // Получаем все активности пользователя и генерируем виртуальные записи
+      const allActivities = await apiService.getAllUserActivityRecords();
+      
+      // Фильтруем виртуальные записи по выбранной дате
+      const dateActivities = allActivities.filter((activity) => {
+        const activityDate = new Date(activity.date).toISOString().split('T')[0];
+        return activityDate === dateStr;
+      });
       
       // Sort by time
       dateActivities.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
@@ -188,7 +195,6 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     } catch (error) {
       console.error('Failed to load activities for date:', error);
 
-      
       // Show user-friendly error message
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       if (errorMessage.includes('authentication') || errorMessage.includes('401')) {
@@ -209,22 +215,25 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
 
   const loadActivitiesForMonth = async (dateStr: string) => {
     try {
+      // Получаем все активности пользователя и генерируем виртуальные записи
+      const allActivities = await apiService.getAllUserActivityRecords();
+      
       // Calculate start and end of month
       const date = new Date(dateStr);
       const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
       const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
       
-      const startDateStr = startOfMonth.toISOString().split('T')[0];
-      const endDateStr = endOfMonth.toISOString().split('T')[0];
-      
-      // Use the new optimized API call for date range
-      const monthActivities = await apiService.getActivityRecordsByDateRange(startDateStr, endDateStr);
+      // Фильтруем виртуальные записи по месяцу
+      const monthActivities = allActivities.filter((activity) => {
+        const activityDate = new Date(activity.date);
+        return activityDate >= startOfMonth && activityDate <= endOfMonth;
+      });
       
       // Update calendar dots
       updateMarkedDates(monthActivities);
       
       // Store activities for client-side fallback
-      setAllActivities(monthActivities);
+      setAllActivities(allActivities);
     } catch (error) {
       console.error('Failed to load activities for month:', error);
       try {
@@ -244,7 +253,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     }
   };
 
-  const updateMarkedDates = (activityList: ActivityRecord[]) => {
+  const updateMarkedDates = (activityList: VirtualActivityRecord[]) => {
     const marked: MarkedDates = {};
     
     activityList.forEach((activity) => {
@@ -265,7 +274,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     setMarkedDates(marked);
   };
 
-  const filterActivitiesByDate = (dateStr: string, activityList?: ActivityRecord[]) => {
+  const filterActivitiesByDate = (dateStr: string, activityList?: VirtualActivityRecord[]) => {
     const activitiesToFilter = activityList || allActivities;
     const filtered = activitiesToFilter.filter((activity) => {
       const activityDate = new Date(activity.date).toISOString().split('T')[0];
@@ -286,14 +295,22 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
   const handleDateSelect = (day: any) => {
     const dateStr = day.dateString;
     setSelectedDate(dateStr);
-    // Use the optimized API call for better performance
-    loadActivitiesForDate(dateStr);
+    // Используем кэшированные данные для быстрой фильтрации
+    filterActivitiesByDate(dateStr);
   };
 
   const handleMonthChange = (month: any) => {
     // Load activities for the new month when user navigates
     const monthDateStr = `${month.year}-${String(month.month).padStart(2, '0')}-01`;
     loadActivitiesForMonth(monthDateStr);
+    
+    // Если выбранная дата не в новом месяце, сбрасываем на первую дату месяца
+    const selectedDateObj = new Date(selectedDate);
+    const newMonth = new Date(monthDateStr);
+    if (selectedDateObj.getMonth() !== newMonth.getMonth() || selectedDateObj.getFullYear() !== newMonth.getFullYear()) {
+      setSelectedDate(monthDateStr);
+      filterActivitiesByDate(monthDateStr);
+    }
   };
 
   const handleAddActivity = () => {
@@ -330,7 +347,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     );
   };
 
-  const handleEditActivity = (activity: ActivityRecord) => {
+  const handleEditActivity = (activity: VirtualActivityRecord) => {
     // Use CommonActions for nested navigation across tabs for editing
     navigation.dispatch(
       CommonActions.navigate({
@@ -351,7 +368,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     );
   };
 
-  const handleDeleteActivity = (activity: ActivityRecord) => {
+  const handleDeleteActivity = (activity: VirtualActivityRecord) => {
     Alert.alert(
       t('calendar.delete_activity'),
       t('calendar.delete_activity_confirm', { title: activity.title }),
@@ -395,7 +412,7 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     return pet?.name || 'Unknown Pet';
   };
 
-  const renderActivityDetails = (activity: ActivityRecord): React.ReactNode => {
+  const renderActivityDetails = (activity: VirtualActivityRecord): React.ReactNode => {
     const details = [];
     
     // Show feeding-specific details
@@ -418,6 +435,14 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
     // Show care-specific details (without temperature and weight)
     if (activity.category === 'CARE') {
       // Only show notes for care records, temperature and weight will be removed
+    }
+    
+    // Show repeat information for virtual activities
+    if (isVirtualActivity(activity)) {
+      const repeatDescription = getVirtualActivityRepeatDescription(activity);
+      if (repeatDescription) {
+        details.push(`🔄 ${repeatDescription}`);
+      }
     }
     
     if (details.length > 0) {
@@ -521,7 +546,14 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
                       </View>
                       <View style={styles.activityInfo}>
                         <View style={styles.activityHeader}>
-                          <Text style={styles.activityTitle}>{activity.title}</Text>
+                          <View style={styles.titleContainer}>
+                            <Text style={styles.activityTitle}>{activity.title}</Text>
+                            {isVirtualActivity(activity) && (
+                              <View style={styles.repeatIndicator}>
+                                <Text style={styles.repeatIndicatorText}>🔄</Text>
+                              </View>
+                            )}
+                          </View>
                           <Text style={styles.activityTime}>{formatTime(activity.time)}</Text>
                         </View>
                         <Text style={styles.activityPet}>{getPetName(activity.pet_id)}</Text>
@@ -648,12 +680,29 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 4,
   },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
   activityTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.text,
     flex: 1,
-    marginRight: 8,
+  },
+  repeatIndicator: {
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: Colors.primary + '20',
+  },
+  repeatIndicatorText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '600',
   },
   activityTime: {
     fontSize: 14,

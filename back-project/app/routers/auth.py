@@ -29,6 +29,8 @@ def login(user_in: UserLogin, db: Session = Depends(get_db)):
         db, user.id, device_id=None  # You can add device_id from request if needed
     )
     
+    print(f"🔑 Created refresh token for user {user.id}: {refresh_token[:10]}...")
+    
     return AuthResponse(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -51,13 +53,18 @@ def refresh_token(
     db: Session = Depends(get_db)
 ):
     """Exchange refresh token for new access token"""
+    print(f"🔄 Refresh token request received: {request.refresh_token[:10]}...")
+    
     # Validate refresh token
     token_record = refresh_token_service.validate_refresh_token(db, request.refresh_token)
     if not token_record:
+        print(f"❌ Refresh token validation failed for: {request.refresh_token[:10]}...")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token"
         )
+    
+    print(f"✅ Refresh token validated for user: {token_record.user_id}")
     
     # Get user
     user = user_service.get_user_by_id(db, token_record.user_id)
@@ -70,16 +77,11 @@ def refresh_token(
     # Create new access token
     new_access_token = create_access_token({"sub": user.username})
     
-    # Enable refresh token rotation for better security
-    # Revoke the old refresh token and create a new one
-    refresh_token_service.revoke_refresh_token(db, request.refresh_token)
-    new_refresh_token = refresh_token_service.create_user_refresh_token(
-        db, user.id, device_id=token_record.device_id
-    )
-    
+    # Disable refresh token rotation for better stability
+    # Keep the same refresh token to avoid conflicts
     return RefreshTokenResponse(
         access_token=new_access_token,
-        refresh_token=new_refresh_token
+        refresh_token=None  # Don't rotate refresh token
     )
 
 @router.post("/logout", summary="Logout", description="Logout and revoke refresh token.")

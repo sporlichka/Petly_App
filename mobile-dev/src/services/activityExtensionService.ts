@@ -175,12 +175,13 @@ export class ActivityExtensionService {
       title: data.activityTitle,
       date: this.formatLocalDateTime(date),
       time: this.formatLocalDateTime(date),
-      repeat: undefined, // Продления не повторяются сами
-      notify: true, // Всегда включаем уведомления для продлений
+      notify: true,
       notes: i18n.t('activity.notifications.extension_reminder_body', { 
         repeatType: data.originalRepeat,
         petName: 'your pet'
       }),
+      repeat_type: 'none',
+      repeat_interval: 1,
     };
 
     return await apiService.createActivityRecord(activityData);

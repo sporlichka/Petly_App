@@ -18,6 +18,7 @@ class Pet(Base):
     gender = Column(Enum(PetGender), nullable=False, default=PetGender.MALE)
     birthdate = Column(Date, nullable=False)
     weight = Column(Float, nullable=False)
+    weight_unit = Column(String, nullable=False, default="kg")
     notes = Column(Text, nullable=True)
 
     owner = relationship("User", back_populates="pets")

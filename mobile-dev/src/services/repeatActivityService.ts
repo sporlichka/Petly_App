@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { ActivityRecordCreate, ActivityRecord } from '../types';
+import { ActivityRecordCreate, ActivityRecord, RepeatType } from '../types';
 import { apiService } from './api';
 import { notificationService } from './notificationService';
 import { extensionModalService } from './extensionModalService';
@@ -58,7 +58,7 @@ async function scheduleNotificationForActivity(activity: ActivityRecord, petName
 }
 
 /**
- * Планирует уведомления на месяц вперед для повторяющихся активностей
+ * Планирует уведомления для активности (одно уведомление с правильным триггером)
  */
 async function scheduleMonthlyNotifications(
   activity: ActivityRecord, 
@@ -67,53 +67,20 @@ async function scheduleMonthlyNotifications(
 ): Promise<string[]> {
   const notificationIds: string[] = [];
   try {
-    console.log(`📅 Scheduling notifications for activity ${activity.id}`);
+    console.log(`📅 Scheduling notification for activity ${activity.id}`);
     // Отменяем все старые уведомления для этой активности
     await notificationService.cancelAllNotificationsForActivity(activity.id);
 
-    if (!activity.repeat || activity.repeat === 'none') {
-      // Для одиночных активностей планируем только одно уведомление
-      const notificationId = await scheduleNotificationForActivity(activity, petName);
-      if (notificationId) {
-        notificationIds.push(notificationId);
-      }
-      return notificationIds;
+    // Планируем только одно уведомление - notificationService сам создаст правильный триггер
+    const notificationId = await scheduleNotificationForActivity(activity, petName);
+    if (notificationId) {
+      notificationIds.push(notificationId);
+      console.log(`✅ Scheduled 1 notification for activity ${activity.id} with repeat type: ${activity.repeat_type}`);
     }
-
-    // Для повторяющихся активностей планируем уведомления только на нужные даты
-    const repeatType = activity.repeat as 'daily' | 'weekly' | 'monthly';
-    const repeatDates = getRepeatDates(startDate, repeatType);
-    let notificationCount = 0;
-    for (const date of repeatDates) {
-      // Формируем дату в локальном времени, сохраняя оригинальное время
-      const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), startDate.getHours(), startDate.getMinutes(), startDate.getSeconds());
-      
-      // Используем локальное форматирование времени вместо toISOString()
-      const formatLocalDateTime = (date: Date): string => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-      };
-      
-      const tempActivity: ActivityRecord = {
-        ...activity,
-        date: formatLocalDateTime(localDate),
-        time: formatLocalDateTime(localDate),
-      };
-      const notificationId = await scheduleNotificationForActivity(tempActivity, petName);
-      if (notificationId) {
-        notificationIds.push(notificationId);
-        notificationCount++;
-      }
-    }
-    console.log(`✅ Scheduled ${notificationIds.length} notifications for activity ${activity.id}`);
+    
     return notificationIds;
   } catch (error) {
-    console.error(`❌ Failed to schedule notifications for activity ${activity.id}:`, error);
+    console.error(`❌ Failed to schedule notification for activity ${activity.id}:`, error);
     return notificationIds;
   }
 }
@@ -128,7 +95,7 @@ export interface RepeatActivityResult {
 }
 
 /**
- * Создает основную активность и все повторяющиеся записи с улучшенным планированием уведомлений
+ * Создает основную активность с полями повторов (без создания множественных записей в БД)
  */
 export async function createActivityWithRepeats(
   activityData: ActivityRecordCreate
@@ -136,7 +103,7 @@ export async function createActivityWithRepeats(
   const result: RepeatActivityResult = {
     success: false,
     mainActivity: {} as ActivityRecord,
-    repeatActivities: [],
+    repeatActivities: [], // Теперь пустой массив, так как не создаем дополнительные записи
     notificationIds: [],
     errors: [],
   };
@@ -144,99 +111,44 @@ export async function createActivityWithRepeats(
   try {
     console.log('🔄 Creating activity with enhanced repeats:', activityData);
 
-    // 1. Создаем основную активность
+    // 1. Создаем основную активность с полями повторов
     const mainActivity = await apiService.createActivityRecord(activityData);
     result.mainActivity = mainActivity;
     
-    console.log('✅ Main activity created:', mainActivity.id);
+    console.log('✅ Main activity created with repeat fields:', mainActivity.id);
 
-    // 2. Планируем уведомления для основной активности
-    console.log(`🔔 Planning notifications for main activity ${mainActivity.id}`);
+    // 2. Планируем уведомления для всех дат повторов
+    console.log(`🔔 Planning notifications for activity ${mainActivity.id} with repeats`);
     try {
       const petName = await getPetName(mainActivity.pet_id);
       console.log(`🐾 Pet name: ${petName}`);
 
-      // Планируем уведомления на месяц вперед
+      // Планируем уведомления для всех дат повторов
       const mainNotificationIds = await scheduleMonthlyNotifications(mainActivity, petName, new Date(mainActivity.date));
       result.notificationIds.push(...mainNotificationIds);
       
-      console.log(`✅ Main activity notifications scheduled: ${mainNotificationIds.length} notifications`);
+      console.log(`✅ Activity notifications scheduled: ${mainNotificationIds.length} notifications`);
     } catch (error) {
-      console.error('❌ Failed to schedule main activity notifications:', error);
-      result.errors.push(`Failed to schedule main activity notifications: ${error}`);
+      console.error('❌ Failed to schedule activity notifications:', error);
+      result.errors.push(`Failed to schedule activity notifications: ${error}`);
     }
 
-    // 3. Проверяем, нужно ли создавать повторения
-    if (!shouldCreateRepeats(activityData.repeat)) {
-      console.log('📅 No repeats needed, activity creation complete');
-      console.log(`🔔 Final notification summary: ${result.notificationIds.length} notifications scheduled`);
-      result.success = true;
-      return result;
-    }
-
-    const repeat = activityData.repeat as 'daily' | 'weekly' | 'monthly';
-    console.log(`🔄 Creating repeats for: ${repeat}`);
-
-    // 4. Генерируем даты для повторений
-    const baseDate = new Date(activityData.date);
-    const repeatDates = getRepeatDates(baseDate, repeat);
-    
-    console.log(`📅 Generated ${repeatDates.length} repeat dates:`, 
-      repeatDates.map(d => d.toLocaleDateString())
-    );
-
-    // 5. Создаем активности для каждой даты повторения
-    const repeatPromises = repeatDates.map(async (date, index) => {
+    // 3. Планируем напоминание о продлении только для стандартных интервалов
+    if (shouldCreateRepeats(activityData.repeat_type) && activityData.repeat_interval === 1) {
       try {
-        const repeatActivity = createRepeatActivity(activityData, date);
-        console.log(`📝 Creating repeat activity ${index + 1}/${repeatDates.length} for ${date.toLocaleDateString()}`);
-        return await apiService.createActivityRecord(repeatActivity);
+        const extensionReminderId = await scheduleExtensionReminder(mainActivity, activityData.repeat_type, activityData.repeat_interval);
+        if (extensionReminderId) {
+          result.extensionReminderId = extensionReminderId;
+          console.log(`📲 Extension reminder scheduled:`, extensionReminderId);
+        }
       } catch (error) {
-        console.error(`❌ Failed to create repeat activity ${index + 1}:`, error);
-        result.errors.push(`Failed to create repeat ${index + 1}: ${error}`);
-        return null;
+        console.error('❌ Failed to schedule extension reminder:', error);
+        result.errors.push(`Failed to schedule extension reminder: ${error}`);
       }
-    });
-
-    // Ждем создания всех повторяющихся активностей
-    const repeatResults = await Promise.allSettled(repeatPromises);
-    
-    // Собираем успешно созданные активности
-    repeatResults.forEach((res, index) => {
-      if (res.status === 'fulfilled' && res.value) {
-        result.repeatActivities.push(res.value);
-        console.log(`✅ Repeat activity ${index + 1} created:`, res.value.id);
-      } else {
-        console.error(`❌ Repeat activity ${index + 1} failed:`, res.status === 'rejected' ? res.reason : 'Unknown error');
-        result.errors.push(`Repeat activity ${index + 1} failed to create`);
-      }
-    });
-
-    // 6. НЕ планируем уведомления для повторяющихся активностей
-    // Уведомления уже запланированы для основной активности в scheduleMonthlyNotifications
-    console.log(`🔔 Skipping notification scheduling for ${result.repeatActivities.length} repeat activities (already handled by main activity)`);
-    
-    console.log(`✅ Total notifications scheduled: ${result.notificationIds.length}`);
-
-    // 7. Планируем напоминание о продлении
-    try {
-      const extensionReminderId = await scheduleExtensionReminder(mainActivity, repeat);
-      if (extensionReminderId) {
-        result.extensionReminderId = extensionReminderId;
-        console.log(`📲 Extension reminder scheduled:`, extensionReminderId);
-      }
-    } catch (error) {
-      console.error('❌ Failed to schedule extension reminder:', error);
-      result.errors.push(`Failed to schedule extension reminder: ${error}`);
     }
 
-    // 8. Определяем успешность операции
-    const totalExpected = repeatDates.length;
-    const totalCreated = result.repeatActivities.length;
-    
-    result.success = totalCreated >= totalExpected * 0.5; // Считаем успешным если создано хотя бы 50%
-    
-    console.log(`🎉 Enhanced repeat creation complete: ${totalCreated}/${totalExpected} activities created`);
+    result.success = true;
+    console.log(`🎉 Activity creation complete with repeat fields`);
     console.log(`🔔 Final notification summary: ${result.notificationIds.length} notifications scheduled`);
     
     if (result.errors.length > 0) {
@@ -293,17 +205,22 @@ export async function updateActivityWithRepeats(
     }
 
     // 4. Если изменились параметры повторения, пересоздаем повторяющиеся активности
-    if (activityUpdate.repeat !== undefined || activityUpdate.date || activityUpdate.time) {
+    if (activityUpdate.repeat_type !== undefined || activityUpdate.date || activityUpdate.time) {
       console.log('🔄 Repeat parameters changed, recreating repeat activities...');
       
       // TODO: Удалить существующие повторения (если они есть)
       // Это потребует дополнительной логики отслеживания связанных активностей
       
       // Создаем новые повторения если нужно
-      if (shouldCreateRepeats(updatedActivity.repeat)) {
-        const repeat = updatedActivity.repeat as 'daily' | 'weekly' | 'monthly';
+      if (shouldCreateRepeats(updatedActivity.repeat_type)) {
         const baseDate = new Date(updatedActivity.date);
-        const repeatDates = getRepeatDates(baseDate, repeat);
+        const repeatDates = getRepeatDates(
+          baseDate, 
+          updatedActivity.repeat_type, 
+          updatedActivity.repeat_interval,
+          updatedActivity.repeat_end_date,
+          updatedActivity.repeat_count
+        );
         
         const activityData: ActivityRecordCreate = {
           pet_id: updatedActivity.pet_id,
@@ -311,7 +228,10 @@ export async function updateActivityWithRepeats(
           title: updatedActivity.title,
           date: updatedActivity.date,
           time: updatedActivity.time,
-          repeat: updatedActivity.repeat,
+          repeat_type: updatedActivity.repeat_type,
+          repeat_interval: updatedActivity.repeat_interval,
+          repeat_end_date: updatedActivity.repeat_end_date,
+          repeat_count: updatedActivity.repeat_count,
           notify: updatedActivity.notify,
           notes: updatedActivity.notes,
           food_type: updatedActivity.food_type,
@@ -371,7 +291,7 @@ export async function cleanupExtensionModalsForActivity(activityId: number): Pro
  * Получает сводку для пользователя о том, что будет создано
  */
 export function getRepeatSummary(
-  repeat: string | undefined | null
+  repeat: RepeatType | undefined | null
 ): { willCreateRepeats: boolean; description: string; count: number } {
   if (!shouldCreateRepeats(repeat)) {
     return {
@@ -381,8 +301,8 @@ export function getRepeatSummary(
     };
   }
 
-  const repeatType = repeat as 'daily' | 'weekly' | 'monthly';
-  const countMap = { daily: 7, weekly: 4, monthly: 3 };
+  const countMap: Record<RepeatType, number> = { day: 7, week: 4, month: 3, year: 1, none: 0 };
+  const repeatType = repeat || 'day';
   const count = countMap[repeatType] + 1; // +1 для основной записи
   
   return {
@@ -418,7 +338,7 @@ export async function checkAndScheduleMissedNotifications(): Promise<void> {
           console.log(`⚠️ Found past activity ${activity.id} with notifications enabled`);
           
           // Для повторяющихся активностей планируем следующие уведомления
-          if (activity.repeat && activity.repeat !== 'none') {
+          if (activity.repeat_type && activity.repeat_type !== 'none') {
             const petName = await getPetName(activity.pet_id);
             const nextDate = dayjs(now).add(1, 'day').toDate(); // Начинаем с завтра
             

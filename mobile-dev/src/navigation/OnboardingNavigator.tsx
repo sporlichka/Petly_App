@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { OnboardingStackParamList } from '../types';
 import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
 import { AddPetScreen } from '../screens/onboarding/AddPetScreen';
+import { PetSpeciesPickerScreen } from '../screens/activity/PetSpeciesPickerScreen';
 import { SuccessScreen } from '../screens/onboarding/SuccessScreen';
 
 const Stack = createStackNavigator<OnboardingStackParamList>();
@@ -28,6 +29,13 @@ export const OnboardingNavigator: React.FC<OnboardingNavigatorProps> = ({ onComp
         component={WelcomeScreen}
         options={{
           title: t('navigation.onboarding.welcome')
+        }}
+      />
+      <Stack.Screen 
+        name="PetSpeciesPicker" 
+        component={PetSpeciesPickerScreen}
+        options={{
+          title: t('navigation.onboarding.choose_species')
         }}
       />
       <Stack.Screen 

@@ -1,29 +1,92 @@
 import * as Notifications from 'expo-notifications';
-import { ActivityRecordCreate, ActivityRecord } from '../types';
+import { ActivityRecordCreate, ActivityRecord, RepeatType } from '../types';
 import { extensionModalService } from '../services/extensionModalService';
 import i18n from '../i18n';
 
 /**
- * Генерирует список дат для повторяющихся активностей
+ * Генерирует список дат для повторяющихся активностей с кастомными интервалами
  */
-export function getRepeatDates(baseDate: Date, repeat: 'daily' | 'weekly' | 'monthly'): Date[] {
-  const countMap = { daily: 7, weekly: 4, monthly: 3 };
-  const count = countMap[repeat];
-  const result: Date[] = [];
+export function getRepeatDates(
+  baseDate: Date, 
+  repeatType: RepeatType, 
+  repeatInterval: number = 1,
+  repeatEndDate?: string | null,
+  repeatCount?: number | null
+): Date[] {
+  if (repeatType === 'none') {
+    return [];
+  }
 
-  for (let i = 1; i <= count; i++) {
-    const date = new Date(baseDate);
-    if (repeat === 'daily') {
-      date.setDate(date.getDate() + i);
-    } else if (repeat === 'weekly') {
-      date.setDate(date.getDate() + i * 7);
-    } else if (repeat === 'monthly') {
-      date.setMonth(date.getMonth() + i);
+  const result: Date[] = [];
+  let currentDate = new Date(baseDate);
+  let count = 0;
+
+  // Определяем максимальное количество повторов
+  let maxCount: number;
+  if (repeatCount && repeatCount > 0) {
+    maxCount = repeatCount;
+  } else if (repeatEndDate) {
+    // Вычисляем количество повторов до даты окончания
+    const endDate = new Date(repeatEndDate);
+    maxCount = calculateRepeatCount(currentDate, endDate, repeatType, repeatInterval);
+  } else {
+    // Значения по умолчанию
+    const defaultCounts = { day: 7, week: 4, month: 3, year: 1 };
+    maxCount = defaultCounts[repeatType];
+  }
+
+  // Генерируем даты
+  while (count < maxCount) {
+    const nextDate = new Date(currentDate);
+    
+    switch (repeatType) {
+      case 'day':
+        nextDate.setDate(currentDate.getDate() + (count + 1) * repeatInterval);
+        break;
+      case 'week':
+        nextDate.setDate(currentDate.getDate() + (count + 1) * repeatInterval * 7);
+        break;
+      case 'month':
+        nextDate.setMonth(currentDate.getMonth() + (count + 1) * repeatInterval);
+        break;
+      case 'year':
+        nextDate.setFullYear(currentDate.getFullYear() + (count + 1) * repeatInterval);
+        break;
     }
-    result.push(date);
+
+    // Проверяем, не превышает ли дата дату окончания
+    if (repeatEndDate && nextDate > new Date(repeatEndDate)) {
+      break;
+    }
+
+    result.push(nextDate);
+    count++;
   }
 
   return result;
+}
+
+/**
+ * Вычисляет количество повторов между двумя датами
+ */
+function calculateRepeatCount(startDate: Date, endDate: Date, repeatType: RepeatType, repeatInterval: number): number {
+  const timeDiff = endDate.getTime() - startDate.getTime();
+  const dayDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+  switch (repeatType) {
+    case 'day':
+      return Math.floor(dayDiff / repeatInterval);
+    case 'week':
+      return Math.floor(dayDiff / (repeatInterval * 7));
+    case 'month':
+      // Приблизительно 30 дней в месяце
+      return Math.floor(dayDiff / (repeatInterval * 30));
+    case 'year':
+      // Приблизительно 365 дней в году
+      return Math.floor(dayDiff / (repeatInterval * 365));
+    default:
+      return 0;
+  }
 }
 
 /**
@@ -50,25 +113,19 @@ export function createRepeatActivity(
     ...baseActivity,
     date: newDateTimeString,
     time: newDateTimeString,
-    // Убираем repeat для дополнительных записей - они не должны создавать еще больше повторений
-    repeat: undefined,
+    // Для повторяющихся активностей используем новые поля
+    repeat_type: 'none', // Дополнительные записи не повторяются сами
+    repeat_interval: 1,
   };
 }
 
 /**
  * Вычисляет количество дней для напоминания о продлении
  */
-export function getExtensionReminderDays(repeat: 'daily' | 'weekly' | 'monthly'): number {
-  switch (repeat) {
-    case 'daily':
-      return 7;
-    case 'weekly':
-      return 28; // 4 недели
-    case 'monthly':
-      return 90; // 3 месяца
-    default:
-      return 7;
-  }
+export function getExtensionReminderDays(repeatType: RepeatType, repeatInterval: number = 1): number {
+  const baseDays = { day: 7, week: 28, month: 90, year: 365 };
+  const baseDay = baseDays[repeatType] || 7;
+  return baseDay * repeatInterval;
 }
 
 /**
@@ -76,17 +133,18 @@ export function getExtensionReminderDays(repeat: 'daily' | 'weekly' | 'monthly')
  */
 export async function scheduleExtensionReminder(
   activity: ActivityRecord,
-  repeat: 'daily' | 'weekly' | 'monthly'
+  repeatType: RepeatType,
+  repeatInterval: number = 1
 ): Promise<string | null> {
   try {
-    console.log(`📅 Scheduling extension reminder for activity ${activity.id} (${repeat})`);
+    console.log(`📅 Scheduling extension reminder for activity ${activity.id} (${repeatType}, interval: ${repeatInterval})`);
     
     // Вычисляем дату последней активности в серии повторений
     const activityDate = new Date(activity.date);
     const lastActivityDate = new Date(activityDate);
     
     // Добавляем соответствующий период к дате активности
-    const reminderDays = getExtensionReminderDays(repeat);
+    const reminderDays = getExtensionReminderDays(repeatType, repeatInterval);
     lastActivityDate.setDate(lastActivityDate.getDate() + reminderDays);
     
     // Напоминание планируется на СЛЕДУЮЩИЙ день после завершения серии
@@ -111,14 +169,15 @@ export async function scheduleExtensionReminder(
       content: {
         title: i18n.t('activity.notifications.extension_reminder_title'),
         body: i18n.t('activity.notifications.extension_reminder_body', {
-          repeatType: repeat,
+          repeatType: getRepeatTypeDescription(repeatType, repeatInterval),
           petName: 'your pet'
         }),
         sound: 'default',
         data: {
           type: 'repeat-extension',
           activityId: activity.id,
-          originalRepeat: repeat,
+          originalRepeat: repeatType,
+          originalInterval: repeatInterval,
           petId: activity.pet_id,
           category: activity.category,
         },
@@ -134,7 +193,7 @@ export async function scheduleExtensionReminder(
       await extensionModalService.scheduleExtensionModal({
         activityId: activity.id,
         activityTitle: activity.title,
-        originalRepeat: repeat,
+        originalRepeat: repeatType,
         petId: activity.pet_id,
         category: activity.category,
         scheduledDate: reminderDate.toISOString(),
@@ -158,7 +217,7 @@ export async function scheduleExtensionReminder(
 /**
  * Создает уникальное название для повторяющихся активностей
  */
-export function createRepeatTitle(baseTitle: string, index: number, repeat: string): string {
+export function createRepeatTitle(baseTitle: string, index: number, repeatType: RepeatType): string {
   // Для обычных записей возвращаем оригинальное название
   return baseTitle;
 }
@@ -166,22 +225,61 @@ export function createRepeatTitle(baseTitle: string, index: number, repeat: stri
 /**
  * Проверяет, нужно ли создавать повторения
  */
-export function shouldCreateRepeats(repeat: string | undefined | null): boolean {
-  return repeat !== undefined && repeat !== null && repeat !== 'none';
+export function shouldCreateRepeats(repeatType: RepeatType | undefined | null): boolean {
+  return repeatType !== undefined && repeatType !== null && repeatType !== 'none';
 }
 
 /**
  * Получает описание периода повторения для пользователя
  */
-export function getRepeatDescription(repeat: 'daily' | 'weekly' | 'monthly'): string {
-  switch (repeat) {
-    case 'daily':
-      return i18n.t('activity.notifications.repeat_descriptions.daily');
-    case 'weekly':
-      return i18n.t('activity.notifications.repeat_descriptions.weekly');
-    case 'monthly':
-      return i18n.t('activity.notifications.repeat_descriptions.monthly');
-    default:
-      return '';
+export function getRepeatDescription(repeatType: RepeatType, repeatInterval: number = 1): string {
+  if (repeatInterval === 1) {
+    switch (repeatType) {
+      case 'day':
+        return i18n.t('activity.every_day');
+      case 'week':
+        return i18n.t('activity.every_week');
+      case 'month':
+        return i18n.t('activity.every_month');
+      case 'year':
+        return i18n.t('activity.every_year');
+      default:
+        return '';
+    }
+  } else {
+    switch (repeatType) {
+      case 'day':
+        return i18n.t('activity.every_x_days', { count: repeatInterval });
+      case 'week':
+        return i18n.t('activity.every_x_weeks', { count: repeatInterval });
+      case 'month':
+        return i18n.t('activity.every_x_months', { count: repeatInterval });
+      case 'year':
+        return i18n.t('activity.every_x_years', { count: repeatInterval });
+      default:
+        return '';
+    }
+  }
+}
+
+/**
+ * Получает описание типа повтора для уведомлений
+ */
+export function getRepeatTypeDescription(repeatType: RepeatType, repeatInterval: number = 1): string {
+  if (repeatInterval === 1) {
+    switch (repeatType) {
+      case 'day':
+        return 'daily';
+      case 'week':
+        return 'weekly';
+      case 'month':
+        return 'monthly';
+      case 'year':
+        return 'yearly';
+      default:
+        return 'repeating';
+    }
+  } else {
+    return `${repeatInterval}-${repeatType}`;
   }
 } 

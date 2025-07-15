@@ -19,6 +19,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
+import { useSpeciesUtils } from '../../utils/speciesUtils';
 
 type PetDetailScreenNavigationProp = StackNavigationProp<HomeStackParamList, 'PetDetail'>;
 type PetDetailScreenRouteProp = RouteProp<HomeStackParamList, 'PetDetail'>;
@@ -33,6 +34,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
   route,
 }) => {
   const { t, i18n } = useTranslation();
+  const { getSpeciesDisplayName, getSpeciesIcon } = useSpeciesUtils();
   const { petId } = route.params;
   const [pet, setPet] = useState<Pet | null>(null);
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
@@ -258,13 +260,7 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
   };
 
   const getPetIcon = (species: string): string => {
-    const lowerSpecies = species.toLowerCase();
-    if (lowerSpecies.includes('dog')) return '🐕';
-    if (lowerSpecies.includes('cat')) return '🐱';
-    if (lowerSpecies.includes('bird')) return '🐦';
-    if (lowerSpecies.includes('rabbit')) return '🐰';
-    if (lowerSpecies.includes('fish')) return '🐟';
-    return '🐾';
+    return getSpeciesIcon(species);
   };
 
   const handleViewAllActivities = () => {
@@ -383,12 +379,12 @@ export const PetDetailScreen: React.FC<PetDetailScreenProps> = ({
             <View style={styles.petMainInfo}>
               <Text style={styles.petName}>{pet.name}</Text>
               <Text style={styles.petSpecies}>
-                {t('pets.gender_' + pet.gender.toLowerCase())} {pet.species}
+                {pet.gender ? t('pets.gender_' + pet.gender.toLowerCase()) : ''} {getSpeciesDisplayName(pet.species || '')}
               </Text>
               {pet.breed && (
                 <Text style={styles.petBreed}>{pet.breed}</Text>
               )}
-              <Text style={styles.petAge}>{calculateAge(pet.birthdate)}</Text>
+              <Text style={styles.petAge}>{pet.birthdate ? calculateAge(pet.birthdate) : ''}</Text>
             </View>
           </View>
         </Card>

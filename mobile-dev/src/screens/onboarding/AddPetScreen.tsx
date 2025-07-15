@@ -15,14 +15,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { OnboardingStackParamList, PetCreate, PetFormData, PetGender } from '../../types';
+import { OnboardingStackParamList, PetCreate, PetFormData, PetGender, WeightUnit } from '../../types';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
 import { GenderPicker } from '../../components/GenderPicker';
+import { WeightUnitPicker } from '../../components/WeightUnitPicker';
 import { DateTimePickerModal } from '../../components/DateTimePickerModal';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
+import { trackEvent } from '../../services/mixpanelService';
 
 type AddPetScreenNavigationProp = StackNavigationProp<OnboardingStackParamList, 'AddPet'>;
 
@@ -40,6 +42,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
     gender: 'Male',
     birthdate: new Date(),
     weight: '',
+    weight_unit: 'kg',
     notes: '',
   });
   const [errors, setErrors] = useState<Partial<PetFormData>>({});
@@ -77,10 +80,22 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
         gender: formData.gender,
         birthdate: formData.birthdate.toISOString().split('T')[0], // Convert to YYYY-MM-DD format
         weight: parseFloat(formData.weight),
+        weight_unit: formData.weight_unit,
         notes: formData.notes.trim() || undefined,
       };
 
       await apiService.createPet(petData);
+      
+      // Track pet addition event during onboarding
+      trackEvent("adding the pet", {
+        "Pet Species": formData.species,
+        "Pet Gender": formData.gender,
+        "Pet Weight Unit": formData.weight_unit,
+        "OS": Platform.OS, // "ios" или "android"
+        "Pet Name": formData.name,
+        "Source": "Onboarding"
+      });
+      
       navigation.navigate('Success');
     } catch (error) {
       Alert.alert(
@@ -93,11 +108,11 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
     }
   };
 
-  const updateFormData = (field: keyof PetFormData, value: string | Date | PetGender) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const updateFormData = (field: keyof PetFormData, value: string | Date | PetGender | WeightUnit) => {
+    setFormData((prev: PetFormData) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev: Partial<PetFormData>) => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -224,6 +239,15 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
                 leftIcon={
                   <Ionicons name="scale-outline" size={20} color={Colors.textSecondary} />
                 }
+              />
+
+              <WeightUnitPicker
+                label={t('pet_form.weight_unit_label')}
+                value={formData.weight_unit}
+                onValueChange={(unit) => updateFormData('weight_unit', unit)}
+                error={errors.weight_unit}
+                kgLabel="kg"
+                lbLabel="lb"
               />
 
               <Input

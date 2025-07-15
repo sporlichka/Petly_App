@@ -20,12 +20,15 @@ class ActivityRecordService:
             title=record.title,
             date=record.date,
             time=record.time,
-            repeat=record.repeat,
             notify=record.notify if record.notify is not None else True,
             notes=record.notes,
             food_type=record.food_type,
             quantity=record.quantity,
             duration=record.duration,
+            repeat_type=record.repeat_type,
+            repeat_interval=record.repeat_interval,
+            repeat_end_date=record.repeat_end_date,
+            repeat_count=record.repeat_count,
         )
         db.add(db_record)
         db.commit()

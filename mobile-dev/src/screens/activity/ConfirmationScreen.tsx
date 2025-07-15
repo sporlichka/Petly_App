@@ -107,19 +107,117 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   };
 
   const getRepeatText = () => {
-    switch (activityData.repeat) {
-      case 'daily':
-        return `🔄 ${t('activity.daily')}`;
-      case 'weekly':
-        return `📆 ${t('activity.weekly')}`;
-      case 'monthly':
-        return `🗓️ ${t('activity.monthly')}`;
-      default:
-        return `📅 ${t('activity.one_time')}`;
+    if (!activityData.repeat_type || activityData.repeat_type === 'none') {
+      return `📅 ${t('activity.one_time')}`;
     }
+
+    const interval = activityData.repeat_interval || 1;
+    const type = activityData.repeat_type;
+    
+    let repeatText = '';
+    if (interval === 1) {
+      switch (type) {
+        case 'day':
+          repeatText = `🔄 ${t('activity.every_day')}`;
+          break;
+        case 'week':
+          repeatText = `📆 ${t('activity.every_week')}`;
+          break;
+        case 'month':
+          repeatText = `🗓️ ${t('activity.every_month')}`;
+          break;
+        case 'year':
+          repeatText = `📅 ${t('activity.every_year')}`;
+          break;
+      }
+    } else {
+      switch (type) {
+        case 'day':
+          repeatText = `🔄 ${t('activity.every_x_days', { count: interval })}`;
+          break;
+        case 'week':
+          repeatText = `📆 ${t('activity.every_x_weeks', { count: interval })}`;
+          break;
+        case 'month':
+          repeatText = `🗓️ ${t('activity.every_x_months', { count: interval })}`;
+          break;
+        case 'year':
+          repeatText = `📅 ${t('activity.every_x_years', { count: interval })}`;
+          break;
+      }
+    }
+
+    // Добавляем информацию об окончании
+    if (activityData.repeat_end_date) {
+      repeatText += ` ${t('activity.until')} ${new Date(activityData.repeat_end_date).toLocaleDateString()}`;
+    } else if (activityData.repeat_count) {
+      repeatText += ` ${t('activity.times', { count: activityData.repeat_count })}`;
+    }
+
+    return repeatText;
   };
 
-  const repeatSummary = getRepeatSummary(activityData.repeat);
+  const getRepeatSummary = () => {
+    if (!activityData.repeat_type || activityData.repeat_type === 'none') {
+      return {
+        willCreateRepeats: false,
+        description: t('activity.one_time_description'),
+        count: 1,
+      };
+    }
+
+    const interval = activityData.repeat_interval || 1;
+    const type = activityData.repeat_type;
+    
+    let count = 1; // Основная запись
+    let description = '';
+
+    if (activityData.repeat_count && activityData.repeat_count > 0) {
+      count = activityData.repeat_count;
+      description = t('activity.repeat_count_description', { count: count - 1 });
+    } else if (activityData.repeat_end_date) {
+      // Вычисляем примерное количество повторов до даты окончания
+      const startDate = new Date(activityData.date);
+      const endDate = new Date(activityData.repeat_end_date);
+      const timeDiff = endDate.getTime() - startDate.getTime();
+      const dayDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+      switch (type) {
+        case 'day':
+          count = Math.floor(dayDiff / interval) + 1;
+          break;
+        case 'week':
+          count = Math.floor(dayDiff / (interval * 7)) + 1;
+          break;
+        case 'month':
+          count = Math.floor(dayDiff / (interval * 30)) + 1;
+          break;
+        case 'year':
+          count = Math.floor(dayDiff / (interval * 365)) + 1;
+          break;
+      }
+      description = t('activity.repeat_until_date_description', { 
+        date: endDate.toLocaleDateString(),
+        count: count - 1 
+      });
+    } else {
+      // Значения по умолчанию
+      const defaultCounts: Record<string, number> = { day: 7, week: 4, month: 3, year: 1 };
+      count = (defaultCounts[type] || 1) + 1;
+      description = t('activity.repeat_default_description', { 
+        count: count - 1,
+        type: t(`activity.repeat_${type}s`)
+      });
+    }
+
+    return {
+      willCreateRepeats: true,
+      description,
+      count,
+    };
+  };
+
+  const repeatSummary = getRepeatSummary();
 
   const handleSaveActivity = async () => {
     setIsSaving(true);
@@ -152,12 +250,15 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
       const localDateTimeString = formatLocalDateTime(combined);
       
       if (isEditMode && editActivity) {
-        // Update existing activity with repeats handling
+        // Update existing activity with new repeat fields
         const activityUpdate: ActivityRecordUpdate = {
           title: activityData.title,
           date: localDateTimeString,
           time: localDateTimeString,
-          repeat: activityData.repeat === 'none' ? undefined : activityData.repeat,
+          repeat_type: activityData.repeat_type,
+          repeat_interval: activityData.repeat_interval,
+          repeat_end_date: activityData.repeat_end_date,
+          repeat_count: activityData.repeat_count,
           notify: activityData.notifications !== undefined ? activityData.notifications : true,
           notes: activityData.notes || undefined,
           food_type: activityData.food_type || undefined,
@@ -165,8 +266,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           duration: activityData.duration || undefined,
         };
 
-        console.log('Updating activity record with repeats:', activityUpdate);
-        console.log('activityData.notifications value:', activityData.notifications, 'Type:', typeof activityData.notifications);
+        console.log('Updating activity record with new repeat fields:', activityUpdate);
         
         // For edit mode, use simpler logic for now - just update the main activity
         // TODO: Implement full repeat handling for edit mode
@@ -195,14 +295,17 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           navigation.getParent()?.goBack();
         }
       } else {
-        // Create new activity with repeats
+        // Create new activity with new repeat fields
         const activityRecord: ActivityRecordCreate = {
           pet_id: petId,
-          category,
+          category: category as "FEEDING" | "CARE" | "ACTIVITY",
           title: activityData.title,
           date: localDateTimeString,
           time: localDateTimeString,
-          repeat: activityData.repeat === 'none' ? undefined : activityData.repeat,
+          repeat_type: activityData.repeat_type || 'none',
+          repeat_interval: activityData.repeat_interval || 1,
+          repeat_end_date: activityData.repeat_end_date,
+          repeat_count: activityData.repeat_count,
           notify: activityData.notifications !== undefined ? activityData.notifications : true,
           notes: activityData.notes || undefined,
           food_type: activityData.food_type || undefined,
@@ -210,8 +313,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
           duration: activityData.duration || undefined,
         };
 
-        console.log('Creating activity record with repeats:', activityRecord);
-        console.log('activityData.notifications value:', activityData.notifications, 'Type:', typeof activityData.notifications);
+        console.log('Creating activity record with new repeat fields:', activityRecord);
         
         // Use new repeat service to create all activities
         const repeatResult = await createActivityWithRepeats(activityRecord);
@@ -221,16 +323,30 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
         }
         
         const createdActivity = repeatResult.mainActivity;
-        const totalCreated = 1 + repeatResult.repeatActivities.length;
         
-        console.log(`✅ Created ${totalCreated} activities (1 main + ${repeatResult.repeatActivities.length} repeats)`);
+        // Вычисляем количество виртуальных записей, которые будут показаны
+        let virtualCount = 1; // Основная запись
+        if (activityData.repeat_type && activityData.repeat_type !== 'none') {
+          const baseDate = new Date(activityData.date);
+          const { getRepeatDates } = await import('../../utils/repeatHelpers');
+          const repeatDates = getRepeatDates(
+            baseDate,
+            activityData.repeat_type,
+            activityData.repeat_interval,
+            activityData.repeat_end_date,
+            activityData.repeat_count
+          );
+          virtualCount += repeatDates.length;
+        }
+        
+        console.log(`✅ Created 1 activity with repeat fields, will show ${virtualCount} virtual records`);
         console.log(`📱 Notifications scheduled: ${repeatResult.notificationIds.length}`);
         
         // Notifications are already scheduled by the repeat service
         // No need to schedule them again here
         
-        const successMessage = totalCreated > 1 
-          ? `${activityData.title} has been added to your pet's activity log.\n\n📅 Created ${totalCreated} activities total (including ${repeatResult.repeatActivities.length} repeats).${repeatResult.notificationIds.length > 0 ? `\n\n📱 ${repeatResult.notificationIds.length} reminders have been set!` : ''}${repeatResult.extensionReminderId ? '\n\n⏰ Extension reminder scheduled!' : ''}`
+        const successMessage = virtualCount > 1 
+          ? `${activityData.title} has been added to your pet's activity log.\n\n📅 Will show ${virtualCount} activities total (including ${virtualCount - 1} repeats).${repeatResult.notificationIds.length > 0 ? `\n\n📱 ${repeatResult.notificationIds.length} reminders have been set!` : ''}${repeatResult.extensionReminderId ? '\n\n⏰ Extension reminder scheduled!' : ''}`
           : `${activityData.title} has been added to your pet's activity log.${activityData.notifications ? '\n\n📱 Reminder has been set!' : ''}`;
 
         // Remove Alert.alert and navigate directly after creation
@@ -294,7 +410,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
             <View style={styles.detailRow}>
               <Ionicons name="time-outline" size={20} color={categoryInfo.color} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>{t('activity.date_time_label')}</Text>
+                <Text style={styles.detailLabel}>{t('activity.date_time_header')}</Text>
                 <Text style={styles.detailValue}>{formatDateTime()}</Text>
               </View>
             </View>
@@ -303,7 +419,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
             <View style={styles.detailRow}>
               <Ionicons name="repeat-outline" size={20} color={categoryInfo.color} />
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>{t('activity.repeat_label')}</Text>
+                <Text style={styles.detailLabel}>{t('activity.repeat_settings_header')}</Text>
                 <Text style={styles.detailValue}>{getRepeatText()}</Text>
                 {repeatSummary.willCreateRepeats && (
                   <Text style={styles.detailSubtext}>{repeatSummary.description}</Text>

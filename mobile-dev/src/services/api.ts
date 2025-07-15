@@ -17,7 +17,14 @@ import {
   ChatMessage,
   ApiError
 } from '../types';
+import { 
+  generateVirtualActivitiesForList, 
+  VirtualActivityRecord,
+  filterVirtualActivitiesByDate,
+  filterVirtualActivitiesByDateRange
+} from './virtualActivityService';
 import { tokenStorage } from './tokenStorage';
+import { identifyUser, trackEvent } from './mixpanelService';
 
 const API_BASE_URL = 'https://tabvetly.live';
 
@@ -77,9 +84,11 @@ class ApiService {
         await tokenStorage.setAccessToken(data.access_token);
         
         // Store new refresh token if provided (token rotation)
+        // If no new refresh token, keep the existing one
         if (data.refresh_token) {
           await tokenStorage.setRefreshToken(data.refresh_token);
         }
+        // If refresh_token is null/undefined, we keep the existing refresh token
 
         console.log('✅ Token refreshed successfully');
         return data.access_token;
@@ -101,6 +110,17 @@ class ApiService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
+    // Check if token is expiring soon and refresh proactively
+    const accessToken = await tokenStorage.getAccessToken();
+    if (accessToken && this.isTokenExpiringSoon(accessToken, 2)) { // 2 minute buffer
+      console.log('🔄 Token expiring soon, refreshing proactively...');
+      try {
+        await this.refreshAccessToken();
+      } catch (error) {
+        console.log('⚠️ Proactive refresh failed, continuing with current token');
+      }
+    }
+
     // First attempt with current token
     let headers = await this.getAuthHeaders();
     
@@ -202,20 +222,53 @@ class ApiService {
     await tokenStorage.setRefreshToken(response.refresh_token);
     await tokenStorage.setUser(response.user);
     
+    identifyUser(response.user.id.toString(), {
+      "$name": response.user.username || response.user.email,
+      "$email": response.user.email
+    });
+    
+    // Track login event
+    trackEvent("Sign Up", {
+      "Signup Type": "Email",
+      "OS": "mobile" // Общий для всех мобильных платформ
+    });
+    
     console.log('🔑 Login successful - tokens stored securely');
     
     return response;
   }
 
   async register(userData: UserCreate): Promise<User> {
-    return this.request<User>('/auth/register', {
+    const user = await this.request<User>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
+    
+    // Mixpanel identification
+    identifyUser(user.id.toString(), {
+      "$name": user.username || user.email,
+      "$email": user.email
+    });
+    
+    // Track registration event
+    trackEvent("Sign Up", {
+      "Signup Type": "Email",
+      "OS": "mobile" // Общий для всех мобильных платформ
+    });
+    
+    return user;
   }
 
   async getCurrentUser(): Promise<User> {
-    return this.request<User>('/auth/me');
+    const user = await this.request<User>('/auth/me');
+    
+    // Mixpanel identification
+    identifyUser(user.id.toString(), {
+      "$name": user.email,
+      "$email": user.email
+    });
+    
+    return user;
   }
 
   async logout(): Promise<void> {
@@ -234,6 +287,10 @@ class ApiService {
     
     // Clear all local auth data
     await tokenStorage.clearAll();
+    
+    // Reset Mixpanel user
+    // Note: resetUser function is available in mixpanelService if needed
+    
     console.log('🔑 Logged out - all tokens cleared');
   }
 
@@ -281,62 +338,53 @@ class ApiService {
     });
   }
 
-  // Activity Record endpoints
+  // Activity Record endpoints (обновлено для новых полей)
+
   async getActivityRecords(
     petId: number,
     category?: string,
     skip = 0,
     limit = 100
-  ): Promise<ActivityRecord[]> {
+  ): Promise<VirtualActivityRecord[]> {
     const params = new URLSearchParams({
       pet_id: petId.toString(),
       skip: skip.toString(),
       limit: limit.toString(),
     });
-    
     if (category) {
-      // Backend expects uppercase categories
       params.append('category', category.toUpperCase());
     }
-
-    const records = await this.request<ActivityRecord[]>(`/records/?${params.toString()}`);
-    
-    // Categories should already be uppercase from backend
-    return records;
+    const activities = await this.request<ActivityRecord[]>(`/records/?${params.toString()}`);
+    return generateVirtualActivitiesForList(activities);
   }
 
   async getAllUserActivityRecords(
     category?: string,
     skip = 0,
     limit = 1000
-  ): Promise<ActivityRecord[]> {
+  ): Promise<VirtualActivityRecord[]> {
     const params = new URLSearchParams({
       skip: skip.toString(),
       limit: limit.toString(),
     });
-    
     if (category) {
       params.append('category', category.toUpperCase());
     }
-
-    const records = await this.request<ActivityRecord[]>(`/records/all-user-pets?${params.toString()}`);
-    return records;
+    const activities = await this.request<ActivityRecord[]>(`/records/all-user-pets?${params.toString()}`);
+    return generateVirtualActivitiesForList(activities);
   }
 
   async getActivityRecordsByDate(
     date: string, // Format: YYYY-MM-DD
     category?: string
-  ): Promise<ActivityRecord[]> {
-    const params = new URLSearchParams({
-      date: date,
-    });
-    
+  ): Promise<VirtualActivityRecord[]> {
+    const params = new URLSearchParams({ date });
     if (category) {
       params.append('category', category.toUpperCase());
     }
-
-    const records = await this.request<ActivityRecord[]>(`/records/by-date?${params.toString()}`);
-    return records;
+    const activities = await this.request<ActivityRecord[]>(`/records/by-date?${params.toString()}`);
+    const virtualActivities = generateVirtualActivitiesForList(activities);
+    return filterVirtualActivitiesByDate(virtualActivities, new Date(date));
   }
 
   async getActivityRecordsByDateRange(
@@ -345,33 +393,26 @@ class ApiService {
     category?: string,
     skip = 0,
     limit = 1000
-  ): Promise<ActivityRecord[]> {
+  ): Promise<VirtualActivityRecord[]> {
     const params = new URLSearchParams({
       start_date: startDate,
       end_date: endDate,
       skip: skip.toString(),
       limit: limit.toString(),
     });
-    
     if (category) {
       params.append('category', category.toUpperCase());
     }
-
-    const records = await this.request<ActivityRecord[]>(`/records/by-date-range?${params.toString()}`);
-    return records;
+    const activities = await this.request<ActivityRecord[]>(`/records/by-date-range?${params.toString()}`);
+    const virtualActivities = generateVirtualActivitiesForList(activities);
+    return filterVirtualActivitiesByDateRange(virtualActivities, new Date(startDate), new Date(endDate));
   }
 
   async getActivityRecord(recordId: number): Promise<ActivityRecord> {
-    const record = await this.request<ActivityRecord>(`/records/${recordId}`);
-    
-    // Categories should already be uppercase from backend
-    return record;
+    return this.request<ActivityRecord>(`/records/${recordId}`);
   }
 
   async createActivityRecord(recordData: ActivityRecordCreate): Promise<ActivityRecord> {
-    // Backend expects uppercase categories, so send data as-is
-    console.log('Creating activity record:', recordData);
-    
     return this.request<ActivityRecord>('/records/', {
       method: 'POST',
       body: JSON.stringify(recordData),
@@ -450,6 +491,19 @@ class ApiService {
     }
   }
 
+  private isTokenExpiringSoon(token: string, bufferMinutes: number = 5): boolean {
+    try {
+      // Check if token will expire within the buffer time
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      const bufferSeconds = bufferMinutes * 60;
+      return payload.exp < (currentTime + bufferSeconds);
+    } catch (error) {
+      // If we can't parse the token, consider it invalid
+      return true;
+    }
+  }
+
   async isAuthenticated(): Promise<boolean> {
     // Check if we have any tokens at all
     if (!(await tokenStorage.hasValidTokens())) {
@@ -461,9 +515,9 @@ class ApiService {
       return false;
     }
 
-    // Check if access token is expired
-    if (this.isTokenExpired(accessToken)) {
-      console.log('🔑 Access token expired, trying refresh...');
+    // Check if access token is expired or will expire soon (within 5 minutes)
+    if (this.isTokenExpired(accessToken) || this.isTokenExpiringSoon(accessToken)) {
+      console.log('🔑 Access token expired or expiring soon, trying refresh...');
       
       // Try to refresh the token
       try {
@@ -475,14 +529,8 @@ class ApiService {
       }
     }
 
-    // Token appears valid, but let's verify with a quick API call
-    try {
-      await this.getCurrentUser();
-      return true;
-    } catch (error) {
-      console.log('🔑 Token validation failed:', error);
-      return false;
-    }
+    // Token appears valid - don't make unnecessary API calls
+    return true;
   }
 
   async getStoredUser(): Promise<User | null> {

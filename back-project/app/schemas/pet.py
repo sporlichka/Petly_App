@@ -10,6 +10,7 @@ class PetBase(BaseModel):
     gender: PetGender
     birthdate: date
     weight: float
+    weight_unit: str = "kg"  # "kg" or "lb"
     notes: Optional[str] = None
 
 class PetCreate(PetBase):

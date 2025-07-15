@@ -18,6 +18,7 @@ import { PetCard } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
+import { useSpeciesUtils } from '../../utils/speciesUtils';
 
 type HomeScreenNavigationProp = StackNavigationProp<HomeStackParamList, 'PetList'>;
 
@@ -27,6 +28,7 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { t } = useTranslation();
+  const { getSpeciesDisplayName, getSpeciesIcon } = useSpeciesUtils();
   const [pets, setPets] = useState<Pet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -122,17 +124,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.petHeader}>
           <View style={styles.petIcon}>
             <Text style={styles.petIconText}>
-              {pet.species.toLowerCase().includes('dog') ? '🐕' :
-               pet.species.toLowerCase().includes('cat') ? '🐱' :
-               pet.species.toLowerCase().includes('bird') ? '🐦' :
-               pet.species.toLowerCase().includes('rabbit') ? '🐰' :
-               pet.species.toLowerCase().includes('fish') ? '🐟' : '🐾'}
+              {getSpeciesIcon(pet.species || '')}
             </Text>
           </View>
           <View style={styles.petInfo}>
             <Text style={styles.petName}>{pet.name}</Text>
             <Text style={styles.petSpecies}>
-              {t(`pets.${pet.gender.toLowerCase()}`)} {pet.species}
+              {pet.gender ? t(`pets.${pet.gender.toLowerCase()}`) : ''} {getSpeciesDisplayName(pet.species || '')}
             </Text>
             {pet.breed && <Text style={styles.petBreed}>{pet.breed}</Text>}
           </View>
@@ -141,11 +139,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.petDetails}>
           <View style={styles.detailRow}>
             <Ionicons name="calendar-outline" size={16} color={Colors.textSecondary} />
-            <Text style={styles.detailText}>{calculateAge(pet.birthdate)}</Text>
+            <Text style={styles.detailText}>{pet.birthdate ? calculateAge(pet.birthdate) : ''}</Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="scale-outline" size={16} color={Colors.textSecondary} />
-            <Text style={styles.detailText}>{t('pets.weight_kg', { weight: pet.weight })}</Text>
+            <Text style={styles.detailText}>{pet.weight ? t('pets.weight_kg', { weight: pet.weight }) : ''}</Text>
           </View>
         </View>
 
@@ -168,7 +166,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       <Button
         title={t('home.add_first_pet_button')}
         onPress={() => {
-          navigation.navigate('AddPet');
+          navigation.navigate('PetSpeciesPicker', {
+            fromScreen: 'Home',
+            isOnboarding: false
+          });
         }}
         style={styles.addPetButton}
       />
@@ -217,7 +218,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <Button
             title={t('home.add_pet')}
             onPress={() => {
-              navigation.navigate('AddPet');
+              navigation.navigate('PetSpeciesPicker', {
+                fromScreen: 'Home',
+                isOnboarding: false
+              });
             }}
             variant="secondary"
             size="small"

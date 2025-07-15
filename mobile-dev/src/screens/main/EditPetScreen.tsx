@@ -16,11 +16,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { HomeStackParamList, PetUpdate, PetFormData, PetGender, Pet } from '../../types';
+import { HomeStackParamList, PetUpdate, PetFormData, PetGender, Pet, WeightUnit } from '../../types';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
 import { GenderPicker } from '../../components/GenderPicker';
+import { WeightUnitPicker } from '../../components/WeightUnitPicker';
 import { DateTimePickerModal } from '../../components/DateTimePickerModal';
 import { Colors } from '../../constants/Colors';
 import { apiService } from '../../services/api';
@@ -45,6 +46,7 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
     gender: 'Male',
     birthdate: new Date(),
     weight: '',
+    weight_unit: 'kg',
     notes: '',
   });
   const [errors, setErrors] = useState<Partial<PetFormData>>({});
@@ -85,11 +87,12 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
         // Pre-populate form with existing pet data
         setFormData({
           name: currentPet.name,
-          species: currentPet.species,
+          species: currentPet.species || '',
           breed: currentPet.breed || '',
-          gender: currentPet.gender,
-          birthdate: new Date(currentPet.birthdate),
-          weight: currentPet.weight.toString(),
+          gender: (currentPet.gender as PetGender) || 'Male',
+          birthdate: currentPet.birthdate ? new Date(currentPet.birthdate) : new Date(),
+          weight: currentPet.weight?.toString() || '',
+          weight_unit: currentPet.weight_unit || 'kg',
           notes: currentPet.notes || '',
         });
       } else {
@@ -138,6 +141,7 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
         gender: formData.gender,
         birthdate: formData.birthdate.toISOString().split('T')[0], // Convert to YYYY-MM-DD format
         weight: parseFloat(formData.weight),
+        weight_unit: formData.weight_unit,
         notes: formData.notes.trim() || undefined,
       };
 
@@ -167,11 +171,11 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
     }
   };
 
-  const updateFormData = (field: keyof PetFormData, value: string | Date | PetGender) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const updateFormData = (field: keyof PetFormData, value: string | Date | PetGender | WeightUnit) => {
+    setFormData((prev: PetFormData) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev: Partial<PetFormData>) => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -265,17 +269,18 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
                 }
               />
 
-              <Input
-                label={t('pet_form.species_label')}
-                placeholder={t('pet_form.species_placeholder')}
-                value={formData.species}
-                onChangeText={(text) => updateFormData('species', text)}
-                error={errors.species}
-                autoCapitalize="words"
-                leftIcon={
-                  <Ionicons name="paw-outline" size={20} color={Colors.textSecondary} />
-                }
-              />
+              {/* Species Display (Read-only) */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>{t('pet_form.species_label')}</Text>
+                <View style={styles.disabledInput}>
+                  <Ionicons name="paw-outline" size={20} color={Colors.textLight} />
+                  <Text style={styles.disabledText}>{formData.species}</Text>
+                  <Ionicons name="lock-closed" size={16} color={Colors.textLight} />
+                </View>
+                <Text style={styles.disabledHint}>
+                  {t('pet_form.species_cannot_edit')}
+                </Text>
+              </View>
 
               <GenderPicker
                 label={t('pet_form.gender_label')}
@@ -332,6 +337,15 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
                 leftIcon={
                   <Ionicons name="scale-outline" size={20} color={Colors.textSecondary} />
                 }
+              />
+
+              <WeightUnitPicker
+                label={t('pet_form.weight_unit_label')}
+                value={formData.weight_unit}
+                onValueChange={(unit) => updateFormData('weight_unit', unit)}
+                error={errors.weight_unit}
+                kgLabel="kg"
+                lbLabel="lb"
               />
 
               <Input
@@ -462,6 +476,28 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     minHeight: 48,
+  },
+  disabledInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 48,
+  },
+  disabledText: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.textLight,
+    marginLeft: 12,
+  },
+  disabledHint: {
+    fontSize: 12,
+    color: Colors.textLight,
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   dateText: {
     flex: 1,

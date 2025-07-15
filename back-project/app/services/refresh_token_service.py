@@ -31,6 +31,7 @@ def create_user_refresh_token(db: Session, user_id: int, device_id: Optional[str
 def validate_refresh_token(db: Session, token: str) -> Optional[RefreshToken]:
     """Validate a refresh token and return the token record if valid."""
     token_hash = hash_refresh_token(token)
+    print(f"🔍 Looking for token hash: {token_hash[:10]}...")
     
     # Find the token in database
     db_token = db.query(RefreshToken).filter(
@@ -40,12 +41,15 @@ def validate_refresh_token(db: Session, token: str) -> Optional[RefreshToken]:
     ).first()
     
     if not db_token:
+        print(f"❌ Token not found in database or expired")
         return None
     
     # Verify token hash (double-check)
     if not verify_refresh_token_hash(token, db_token.token_hash):
+        print(f"❌ Token hash verification failed")
         return None
     
+    print(f"✅ Token validated successfully for user {db_token.user_id}")
     return db_token
 
 def revoke_refresh_token(db: Session, token: str) -> bool:

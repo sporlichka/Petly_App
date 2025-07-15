@@ -1,10 +1,11 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import 'react-native-gesture-handler';
 
 import './src/i18n'; // Initialize i18n
+import './src/services/mixpanelService'; // Initialize Mixpanel
 
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { ExtensionModal } from './src/components/ExtensionModal';
