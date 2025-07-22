@@ -109,3 +109,5 @@ Thumbs.db
 
 # Docker
 .dockerignore
+
+petly-assistant-firebase-adminsdk-fbsvc-99ec44a2cf.json
