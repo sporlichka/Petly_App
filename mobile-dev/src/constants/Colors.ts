@@ -10,6 +10,7 @@ export const Colors = {
   
   // Background colors
   background: '#FAFAFA',
+  backgroundSecondary: '#F5F5F5',
   surface: '#FFFFFF',
   cardBackground: '#FFFFFF',
   white: '#FFFFFF',
@@ -26,8 +27,11 @@ export const Colors = {
   
   // Status colors
   success: '#4CAF50',
+  successLight: '#E8F5E8',
   warning: '#FF9800',
+  warningLight: '#FFF3E0',
   error: '#F44336',
+  errorLight: '#FFEBEE',
   info: '#2196F3',
   
   // Additional background

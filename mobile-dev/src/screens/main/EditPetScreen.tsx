@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { HomeStackParamList, PetUpdate, PetFormData, PetGender, Pet, WeightUnit } from '../../types';
+import { useSpeciesUtils } from '../../utils/speciesUtils';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
@@ -36,6 +37,7 @@ interface EditPetScreenProps {
 
 export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route }) => {
   const { t, i18n } = useTranslation();
+  const { getSpeciesDisplayName, getSpeciesIcon } = useSpeciesUtils();
   const { petId } = route.params;
   
   const [pet, setPet] = useState<Pet | null>(null);
@@ -66,15 +68,7 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
     }
   }, [navigation, t, pet]);
 
-  const getPetEmoji = (species: string) => {
-    const s = species.trim().toLowerCase();
-    if (['dog', 'собака'].includes(s)) return '🐕';
-    if (['cat', 'кошка', 'кот'].includes(s)) return '🐱';
-    if (['bird', 'птица'].includes(s)) return '🐦';
-    if (['rabbit', 'кролик'].includes(s)) return '🐰';
-    if (['fish', 'рыба'].includes(s)) return '🐟';
-    return '🐾';
-  };
+
 
   const loadPetDetails = async () => {
     try {
@@ -248,7 +242,7 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
           >
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.emoji}>{getPetEmoji(formData.species)}</Text>
+              <Text style={styles.emoji}>{getSpeciesIcon(formData.species)}</Text>
               <Text style={styles.title}>{t('pet_form.edit_title', { name: pet.name })}</Text>
               <Text style={styles.subtitle}>{t('pet_form.edit_subtitle')}</Text>
             </View>
@@ -274,7 +268,7 @@ export const EditPetScreen: React.FC<EditPetScreenProps> = ({ navigation, route 
                 <Text style={styles.inputLabel}>{t('pet_form.species_label')}</Text>
                 <View style={styles.disabledInput}>
                   <Ionicons name="paw-outline" size={20} color={Colors.textLight} />
-                  <Text style={styles.disabledText}>{formData.species}</Text>
+                  <Text style={styles.disabledText}>{getSpeciesDisplayName(formData.species)}</Text>
                   <Ionicons name="lock-closed" size={16} color={Colors.textLight} />
                 </View>
                 <Text style={styles.disabledHint}>

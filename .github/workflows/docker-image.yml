@@ -46,6 +46,22 @@ jobs:
             exit 1
           fi
 
+      - name: 🔥 Create Firebase service account file
+        run: |
+          cd back-project
+          echo "🔧 Creating Firebase service account file..."
+          echo '${{ secrets.FIREBASE_CREDENTIALS_JSON }}' > firebase.json
+          
+          echo "📝 Checking Firebase service account file:"
+          if [ -f firebase.json ]; then
+            echo "✅ firebase.json file exists"
+            echo "📏 File size: $(wc -c < firebase.json) bytes"
+            echo "🔍 File starts with: $(head -c 50 firebase.json)..."
+          else
+            echo "❌ ERROR: firebase.json file was not created!"
+            exit 1
+          fi
+
       - name: 🐳 Stop existing containers
         run: |
           cd back-project

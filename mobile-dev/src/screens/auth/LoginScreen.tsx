@@ -21,7 +21,7 @@ import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
 import { Colors } from '../../constants/Colors';
-import { apiService } from '../../services/api';
+import { api } from '../../services/api';
 import { LanguageModal } from '../../components/LanguageModal';
 
 type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'>;
@@ -68,14 +68,73 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     setIsLoading(true);
     try {
-      await apiService.login(formData);
+      const response = await api.auth.login(formData);
+      
+      // Проверяем, подтвержден ли email (только если поле существует)
+      // Временно отключено для совместимости с текущим бэкендом
+      /*
+      if (response.user.email_verified !== undefined && !response.user.email_verified) {
+        Alert.alert(
+          t('auth.email_not_verified'),
+          t('auth.email_not_verified_message'),
+          [
+            {
+              text: t('common.cancel'),
+              style: 'cancel'
+            },
+            {
+              text: t('auth.verification.resend'),
+              onPress: () => navigation.navigate('EmailVerificationPending', { 
+                email: formData.email 
+              })
+            }
+          ]
+        );
+        return;
+      }
+      */
+      
       onAuthSuccess();
-    } catch (error) {
-      Alert.alert(
-        t('auth.login_failed'),
-        error instanceof Error ? error.message : t('auth.login_failed_message'),
-        [{ text: t('common.ok') }]
-      );
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      // Обработка специфических ошибок Firebase
+      if (error.code === 'EMAIL_NOT_VERIFIED') {
+        Alert.alert(
+          t('auth.email_not_verified'),
+          t('auth.email_not_verified_message'),
+          [
+            {
+              text: t('common.cancel'),
+              style: 'cancel'
+            },
+            {
+              text: t('auth.verification.resend'),
+              onPress: () => navigation.navigate('EmailVerificationPending', { 
+                email: formData.email 
+              })
+            }
+          ]
+        );
+      } else if (error.code === 'INVALID_CREDENTIALS') {
+        Alert.alert(
+          t('auth.login_failed'),
+          t('auth.invalid_credentials'),
+          [{ text: t('common.ok') }]
+        );
+      } else if (error.code === 'NETWORK_ERROR') {
+        Alert.alert(
+          t('auth.login_failed'),
+          t('auth.network_error'),
+          [{ text: t('common.ok') }]
+        );
+      } else {
+        Alert.alert(
+          t('auth.login_failed'),
+          error.message || t('auth.login_failed_message'),
+          [{ text: t('common.ok') }]
+        );
+      }
     } finally {
       setIsLoading(false);
     }

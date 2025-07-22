@@ -58,7 +58,7 @@ async function scheduleNotificationForActivity(activity: ActivityRecord, petName
 }
 
 /**
- * Планирует уведомления для активности (одно уведомление с правильным триггером)
+ * Планирует уведомления для активности с гибридным подходом
  */
 async function scheduleMonthlyNotifications(
   activity: ActivityRecord, 
@@ -67,16 +67,16 @@ async function scheduleMonthlyNotifications(
 ): Promise<string[]> {
   const notificationIds: string[] = [];
   try {
-    console.log(`📅 Scheduling notification for activity ${activity.id}`);
+    console.log(`📅 Scheduling notifications for activity ${activity.id} with hybrid approach`);
+    
     // Отменяем все старые уведомления для этой активности
     await notificationService.cancelAllNotificationsForActivity(activity.id);
 
-    // Планируем только одно уведомление - notificationService сам создаст правильный триггер
-    const notificationId = await scheduleNotificationForActivity(activity, petName);
-    if (notificationId) {
-      notificationIds.push(notificationId);
-      console.log(`✅ Scheduled 1 notification for activity ${activity.id} with repeat type: ${activity.repeat_type}`);
-    }
+    // Используем новый гибридный подход для виртуальных уведомлений
+    const virtualNotificationIds = await notificationService.scheduleVirtualActivityNotifications(activity, petName);
+    notificationIds.push(...virtualNotificationIds);
+    
+    console.log(`✅ Scheduled ${virtualNotificationIds.length} notifications for activity ${activity.id} with repeat type: ${activity.repeat_type}`);
     
     return notificationIds;
   } catch (error) {
@@ -193,12 +193,12 @@ export async function updateActivityWithRepeats(
     
     console.log('✅ Main activity updated:', updatedActivity.id);
 
-    // 3. Планируем новые уведомления для обновленной активности
+    // 3. Планируем новые уведомления для обновленной активности с гибридным подходом
     try {
       const petName = await getPetName(updatedActivity.pet_id);
       const notificationIds = await scheduleMonthlyNotifications(updatedActivity, petName, new Date(updatedActivity.date));
       result.notificationIds.push(...notificationIds);
-      console.log(`✅ Rescheduled ${notificationIds.length} notifications for updated activity`);
+      console.log(`✅ Rescheduled ${notificationIds.length} notifications for updated activity with hybrid approach`);
     } catch (error) {
       console.error('❌ Failed to reschedule notifications for updated activity:', error);
       result.errors.push(`Failed to reschedule notifications: ${error}`);

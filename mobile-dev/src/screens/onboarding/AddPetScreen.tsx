@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { OnboardingStackParamList, PetCreate, PetFormData, PetGender, WeightUnit } from '../../types';
+import { useSpeciesUtils } from '../../utils/speciesUtils';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
@@ -30,14 +31,24 @@ type AddPetScreenNavigationProp = StackNavigationProp<OnboardingStackParamList, 
 
 interface AddPetScreenProps {
   navigation: AddPetScreenNavigationProp;
+  route: {
+    params: {
+      species?: string;
+      allowSpeciesEdit?: boolean;
+      fromScreen?: string;
+      isOnboarding?: boolean;
+    };
+  };
 }
 
-export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
+export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation, route }) => {
   const { t, i18n } = useTranslation();
+  const { getSpeciesDisplayName, getSpeciesIcon } = useSpeciesUtils();
+  const { species, allowSpeciesEdit = false, fromScreen, isOnboarding = false } = route.params || {};
   
   const [formData, setFormData] = useState<PetFormData>({
     name: '',
-    species: '',
+    species: species || '',
     breed: '',
     gender: 'Male',
     birthdate: new Date(),
@@ -133,6 +144,13 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
     setShowDatePicker(false);
   };
 
+  // Update species when returning from PetSpeciesPicker
+  useEffect(() => {
+    if (species) {
+      updateFormData('species', species);
+    }
+  }, [species]);
+
   return (
     <LinearGradient
       colors={Colors.gradient.background as [string, string]}
@@ -149,7 +167,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
           >
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.emoji}>🐾</Text>
+              <Text style={styles.emoji}>{formData.species ? getSpeciesIcon(formData.species) : '🐾'}</Text>
               <Text style={styles.title}>{t('onboarding.tell_about_pet')}</Text>
               <Text style={styles.subtitle}>
                 {t('onboarding.personalized_care')}
@@ -172,17 +190,28 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation }) => {
                 }
               />
 
-              <Input
-                label={t('onboarding.species_required')}
-                placeholder={t('onboarding.species_placeholder')}
-                value={formData.species}
-                onChangeText={(text) => updateFormData('species', text)}
-                error={errors.species}
-                autoCapitalize="words"
-                leftIcon={
+              {/* Species Selection */}
+              <View style={styles.speciesContainer}>
+                <Text style={styles.inputLabel}>{t('onboarding.species_required')}</Text>
+                <TouchableOpacity
+                  style={[styles.speciesButton, errors.species && styles.errorInput]}
+                  onPress={() => {
+                    navigation.navigate('PetSpeciesPicker', {
+                      fromScreen: 'AddPet',
+                      isOnboarding: true
+                    });
+                  }}
+                >
                   <Ionicons name="paw-outline" size={20} color={Colors.textSecondary} />
-                }
-              />
+                  <Text style={[styles.speciesText, !formData.species && styles.placeholderText]}>
+                    {formData.species ? getSpeciesDisplayName(formData.species) : t('onboarding.species_placeholder')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+                </TouchableOpacity>
+                {errors.species && (
+                  <Text style={styles.errorText}>{errors.species}</Text>
+                )}
+              </View>
 
               <GenderPicker
                 label={t('onboarding.gender_required')}
@@ -340,6 +369,36 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 8,
     color: Colors.text,
+  },
+  speciesContainer: {
+    marginBottom: 16,
+  },
+  speciesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 48,
+  },
+  speciesText: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
+    marginLeft: 12,
+  },
+  placeholderText: {
+    color: Colors.textLight,
+  },
+  errorInput: {
+    borderColor: Colors.error,
+  },
+  errorText: {
+    fontSize: 12,
+    color: Colors.error,
+    marginTop: 4,
   },
   datePickerButton: {
     flexDirection: 'row',

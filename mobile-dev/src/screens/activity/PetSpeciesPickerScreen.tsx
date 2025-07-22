@@ -53,7 +53,8 @@ export const PetSpeciesPickerScreen: React.FC<PetSpeciesPickerScreenProps> = ({
     if (species === 'Other') {
       setShowOtherModal(true);
     } else {
-      navigation.navigate('AddPet', {
+      const target = isOnboarding ? 'AddPet' : 'AddPet';
+      navigation.navigate(target, {
         species,
         allowSpeciesEdit: false,
         fromScreen: 'PetSpeciesPicker',
@@ -68,12 +69,14 @@ export const PetSpeciesPickerScreen: React.FC<PetSpeciesPickerScreenProps> = ({
       return;
     }
 
-    navigation.navigate('AddPet', {
+    const target = isOnboarding ? 'AddPet' : 'AddPet';
+    navigation.navigate(target, {
       species: otherSpecies.trim(),
       allowSpeciesEdit: false,
       fromScreen: 'PetSpeciesPicker',
       isOnboarding
     });
+
     setShowOtherModal(false);
     setOtherSpecies('');
   };

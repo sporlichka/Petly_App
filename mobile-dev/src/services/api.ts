@@ -3,6 +3,10 @@ import {
   UserCreate,
   UserLogin,
   AuthResponse,
+  FirebaseAuthResponse,
+  EmailVerificationRequest,
+  EmailVerificationResponse,
+  EmailVerificationStatus,
   RefreshTokenRequest,
   RefreshTokenResponse,
   Pet,
@@ -15,7 +19,9 @@ import {
   ChatResponse,
   ChatSession,
   ChatMessage,
-  ApiError
+  ApiError,
+  AuthError,
+  AuthErrorType
 } from '../types';
 import { 
   generateVirtualActivitiesForList, 
@@ -25,12 +31,15 @@ import {
 } from './virtualActivityService';
 import { tokenStorage } from './tokenStorage';
 import { identifyUser, trackEvent } from './mixpanelService';
+import { parseAuthError, isVerificationError } from '../utils/authUtils';
+import { API_ENDPOINTS } from '../constants/ApiConstants';
 
 const API_BASE_URL = 'https://tabvetly.live';
 
 class ApiService {
   private isRefreshing = false;
   private refreshPromise: Promise<string> | null = null;
+  private readonly baseUrl = API_BASE_URL;
 
   private async getAuthHeaders(): Promise<Record<string, string>> {
     const token = await tokenStorage.getAccessToken();
@@ -124,6 +133,12 @@ class ApiService {
     // First attempt with current token
     let headers = await this.getAuthHeaders();
     
+    // Если body это FormData, не устанавливаем Content-Type
+    if (options.body instanceof FormData) {
+      const { 'Content-Type': _, ...headersWithoutContentType } = headers;
+      headers = headersWithoutContentType;
+    }
+    
     try {
       let response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
@@ -146,6 +161,13 @@ class ApiService {
             
             // Retry the original request with new token
             headers = await this.getAuthHeaders();
+            
+            // Если body это FormData, не устанавливаем Content-Type
+            if (options.body instanceof FormData) {
+              const { 'Content-Type': _, ...headersWithoutContentType } = headers;
+              headers = headersWithoutContentType;
+            }
+            
             response = await fetch(`${API_BASE_URL}${endpoint}`, {
               ...options,
               headers: {
@@ -169,10 +191,11 @@ class ApiService {
       // Check if response is ok
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorData: any = null;
         
         try {
           // Try to parse as JSON first
-          const errorData: ApiError = await response.json();
+          errorData = await response.json();
           errorMessage = errorData.detail || errorMessage;
         } catch (jsonError) {
           // If JSON parsing fails, try to get text response
@@ -185,7 +208,14 @@ class ApiService {
           }
         }
         
-        throw new Error(errorMessage);
+        // Создаем структурированную ошибку
+        const error = {
+          message: errorMessage,
+          status: response.status,
+          data: errorData
+        };
+        
+        throw error;
       }
 
       // Try to parse successful response as JSON
@@ -211,64 +241,101 @@ class ApiService {
   }
 
   // Auth endpoints
-  async login(credentials: UserLogin): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
-    
-    // Store both tokens securely
-    await tokenStorage.setAccessToken(response.access_token);
-    await tokenStorage.setRefreshToken(response.refresh_token);
-    await tokenStorage.setUser(response.user);
-    
-    identifyUser(response.user.id.toString(), {
-      "$name": response.user.username || response.user.email,
-      "$email": response.user.email
-    });
-    
-    // Track login event
-    trackEvent("Sign Up", {
-      "Signup Type": "Email",
-      "OS": "mobile" // Общий для всех мобильных платформ
-    });
-    
-    console.log('🔑 Login successful - tokens stored securely');
-    
-    return response;
+  async login(credentials: UserLogin): Promise<FirebaseAuthResponse> {
+    try {
+      const response = await this.request<FirebaseAuthResponse>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      });
+      
+      // Проверяем, подтвержден ли email (только если поле существует)
+      // Временно отключено, так как бэкенд также отключил эту проверку
+      /*
+      if (response.user.email_verified !== undefined && !response.user.email_verified) {
+        const authError: AuthError = {
+          type: AuthErrorType.EMAIL_NOT_VERIFIED,
+          message: 'Email не подтвержден. Пожалуйста, подтвердите ваш email перед входом.',
+        };
+        throw authError;
+      }
+      */
+      
+      // Store both tokens securely
+      await tokenStorage.setAccessToken(response.access_token);
+      await tokenStorage.setRefreshToken(response.refresh_token);
+      await tokenStorage.setUser(response.user);
+      
+      identifyUser(response.user.id.toString(), {
+        "$name": response.user.username || response.user.email,
+        "$email": response.user.email
+      });
+      
+      // Track login event
+      trackEvent("Sign In", {
+        "Signup Type": "Email",
+        "OS": "mobile"
+      });
+      
+      console.log('🔑 Login successful - tokens stored securely');
+      
+      return response;
+    } catch (error) {
+      // Парсим ошибку для лучшей обработки
+      const authError = parseAuthError(error);
+      throw authError;
+    }
   }
 
-  async register(userData: UserCreate): Promise<User> {
-    const user = await this.request<User>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
-    
-    // Mixpanel identification
-    identifyUser(user.id.toString(), {
-      "$name": user.username || user.email,
-      "$email": user.email
-    });
-    
-    // Track registration event
-    trackEvent("Sign Up", {
-      "Signup Type": "Email",
-      "OS": "mobile" // Общий для всех мобильных платформ
-    });
-    
-    return user;
+  async register(userData: UserCreate): Promise<FirebaseAuthResponse> {
+    try {
+      const response = await this.request<FirebaseAuthResponse>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      });
+      
+      // Store both tokens securely after registration
+      await tokenStorage.setAccessToken(response.access_token);
+      await tokenStorage.setRefreshToken(response.refresh_token);
+      await tokenStorage.setUser(response.user);
+      
+      // Mixpanel identification
+      identifyUser(response.user.id.toString(), {
+        "$name": response.user.username || response.user.email,
+        "$email": response.user.email
+      });
+      
+      // Track registration event
+      trackEvent("Sign Up", {
+        "Signup Type": "Email",
+        "OS": "mobile",
+        "Email Verification Sent": true // Firebase всегда отправляет email
+      });
+      
+      console.log('🔑 Registration successful - tokens stored and email verification sent');
+      
+      return response;
+    } catch (error) {
+      // Парсим ошибку для лучшей обработки
+      const authError = parseAuthError(error);
+      throw authError;
+    }
   }
 
   async getCurrentUser(): Promise<User> {
-    const user = await this.request<User>('/auth/me');
-    
-    // Mixpanel identification
-    identifyUser(user.id.toString(), {
-      "$name": user.email,
-      "$email": user.email
-    });
-    
-    return user;
+    try {
+      const user = await this.request<User>('/auth/me');
+      
+      // Mixpanel identification
+      identifyUser(user.id.toString(), {
+        "$name": user.username || user.email,
+        "$email": user.email
+      });
+      
+      return user;
+    } catch (error) {
+      const authError = parseAuthError(error);
+      throw authError;
+    }
   }
 
   async logout(): Promise<void> {
@@ -295,22 +362,102 @@ class ApiService {
   }
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await this.request('/auth/change-password', {
-      method: 'POST',
-      body: JSON.stringify({
-        current_password: currentPassword,
-        new_password: newPassword,
-      }),
-    });
+    try {
+      await this.request('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+      
+      console.log('🔑 Password changed successfully');
+    } catch (error) {
+      const authError = parseAuthError(error);
+      throw authError;
+    }
   }
 
-  async deleteProfile(): Promise<void> {
-    await this.request('/auth/delete-profile', {
+  async deleteProfile(password: string): Promise<void> {
+    await this.request('/auth/delete-account', {
       method: 'DELETE',
+      body: JSON.stringify({
+        password: password,
+        confirm_deletion: true
+      })
     });
     // Clear stored data after successful deletion
     await tokenStorage.clearAll();
     console.log('🗑️ Profile deleted - all data cleared');
+  }
+
+  // Email verification methods
+  async resendEmailVerification(): Promise<EmailVerificationResponse> {
+    try {
+      const response = await this.request<EmailVerificationResponse>('/auth/resend-verification', {
+        method: 'POST',
+      });
+      
+      console.log('📧 Email verification resent successfully');
+      return response;
+    } catch (error) {
+      const authError = parseAuthError(error);
+      throw authError;
+    }
+  }
+
+  async checkEmailVerification(): Promise<EmailVerificationStatus> {
+    try {
+      // Получаем email текущего пользователя из хранилища
+      const user = await tokenStorage.getUser();
+      if (!user?.email) {
+        throw new Error('No user email found');
+      }
+
+      return this.checkEmailVerificationByEmail(user.email);
+    } catch (error) {
+      const authError = parseAuthError(error);
+      throw authError;
+    }
+  }
+
+  async checkEmailVerificationByEmail(email: string): Promise<EmailVerificationStatus> {
+    try {
+      // Используем публичный эндпоинт без аутентификации
+      const response = await fetch(`${this.baseUrl}${API_ENDPOINTS.AUTH.VERIFY_EMAIL_STATUS(email)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json() as EmailVerificationStatus;
+      
+      console.log(`📧 Email verification status for ${email}: ${data.email_verified ? 'verified' : 'not verified'}`);
+      return data;
+    } catch (error) {
+      const authError = parseAuthError(error);
+      throw authError;
+    }
+  }
+
+  async verifyEmailWithToken(token: string): Promise<EmailVerificationResponse> {
+    try {
+      const response = await this.request<EmailVerificationResponse>('/auth/verify-email', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      });
+      
+      console.log('✅ Email verified successfully');
+      return response;
+    } catch (error) {
+      const authError = parseAuthError(error);
+      throw authError;
+    }
   }
 
   // Pet endpoints
@@ -533,10 +680,71 @@ class ApiService {
     return true;
   }
 
+  async isEmailVerified(): Promise<boolean> {
+    try {
+      const user = await this.getCurrentUser();
+      return user.email_verified || false;
+    } catch (error) {
+      console.log('🔑 Failed to check email verification status');
+      return false;
+    }
+  }
+
   async getStoredUser(): Promise<User | null> {
     return await tokenStorage.getUser();
   }
 }
 
 export const apiService = new ApiService();
-export default apiService; 
+export default apiService;
+
+// Export the new API structure
+export const api = {
+  auth: {
+    login: (credentials: UserLogin) => apiService.login(credentials),
+    register: (userData: UserCreate) => apiService.register(userData),
+    logout: () => apiService.logout(),
+    getCurrentUser: () => apiService.getCurrentUser(),
+    changePassword: (currentPassword: string, newPassword: string) => 
+      apiService.changePassword(currentPassword, newPassword),
+    deleteProfile: (password: string) => apiService.deleteProfile(password),
+    resendVerificationEmail: () => apiService.resendEmailVerification(),
+    checkEmailVerification: () => apiService.checkEmailVerification(),
+    checkEmailVerificationByEmail: (email: string) => apiService.checkEmailVerificationByEmail(email),
+    verifyEmailToken: (token: string) => apiService.verifyEmailWithToken(token),
+  },
+  pets: {
+    getAll: () => apiService.getPets(),
+    create: (petData: PetCreate) => apiService.createPet(petData),
+    update: (petId: number, petData: PetUpdate) => apiService.updatePet(petId, petData),
+    delete: (petId: number) => apiService.deletePet(petId),
+  },
+  activities: {
+    getAll: (petId: number, category?: string, skip?: number, limit?: number) => 
+      apiService.getActivityRecords(petId, category, skip, limit),
+    getAllUser: (category?: string, skip?: number, limit?: number) => 
+      apiService.getAllUserActivityRecords(category, skip, limit),
+    getByDate: (date: string, category?: string) => 
+      apiService.getActivityRecordsByDate(date, category),
+    getByDateRange: (startDate: string, endDate: string, category?: string, skip?: number, limit?: number) => 
+      apiService.getActivityRecordsByDateRange(startDate, endDate, category, skip, limit),
+    getById: (recordId: number) => apiService.getActivityRecord(recordId),
+    create: (recordData: ActivityRecordCreate) => apiService.createActivityRecord(recordData),
+    update: (recordId: number, recordData: ActivityRecordUpdate) => 
+      apiService.updateActivityRecord(recordId, recordData),
+    delete: (recordId: number) => apiService.deleteActivityRecord(recordId),
+    disableAllNotifications: () => apiService.disableAllNotifications(),
+  },
+  chat: {
+    sendMessage: (request: ChatRequest) => apiService.sendChatMessage(request),
+    getSessions: () => apiService.getChatSessions(),
+    getSessionMessages: (sessionId: string) => apiService.getChatSessionMessages(sessionId),
+    deleteSession: (sessionId: string) => apiService.deleteChatSession(sessionId),
+    clearSessionMessages: (sessionId: string) => apiService.clearChatSessionMessages(sessionId),
+  },
+  utils: {
+    isAuthenticated: () => apiService.isAuthenticated(),
+    isEmailVerified: () => apiService.isEmailVerified(),
+    getStoredUser: () => apiService.getStoredUser(),
+  },
+}; 

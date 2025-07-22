@@ -21,7 +21,7 @@ import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
 import { Colors } from '../../constants/Colors';
-import { apiService } from '../../services/api';
+import { api } from '../../services/api';
 import { LanguageModal } from '../../components/LanguageModal';
 
 type RegisterScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Register'>;
@@ -83,25 +83,67 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     setIsLoading(true);
     try {
       // Register the user
-      await apiService.register({
+      const registerResponse = await api.auth.register({
         username: formData.username,
         email: formData.email,
         password: formData.password,
       });
 
-      // Automatically log them in
-      await apiService.login({
-        email: formData.email,
-        password: formData.password,
-      });
+      // Проверяем, был ли отправлен email для верификации
+      if (registerResponse.email_verification_sent) {
+        Alert.alert(
+          t('auth.verification.pending.title'),
+          t('auth.verification.pending.subtitle'),
+          [
+            {
+              text: t('common.ok'),
+              onPress: () => navigation.navigate('EmailVerificationPending', { 
+                email: formData.email 
+              })
+            }
+          ]
+        );
+        return;
+      }
 
-      onAuthSuccess();
-    } catch (error) {
-      Alert.alert(
-        t('auth.register_failed'),
-        error instanceof Error ? error.message : t('auth.register_failed_message'),
-        [{ text: t('common.ok') }]
-      );
+      // Если email уже подтвержден, автоматически входим
+      if (registerResponse.user.email_verified) {
+        onAuthSuccess();
+      } else {
+        // Переходим к экрану ожидания верификации
+        navigation.navigate('EmailVerificationPending', { 
+          email: formData.email 
+        });
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      
+      // Обработка специфических ошибок Firebase
+      if (error.code === 'EMAIL_ALREADY_EXISTS') {
+        Alert.alert(
+          t('auth.register_failed'),
+          t('auth.email_already_exists'),
+          [{ text: t('common.ok') }]
+        );
+      } else if (error.code === 'WEAK_PASSWORD') {
+        Alert.alert(
+          t('auth.register_failed'),
+          t('auth.weak_password'),
+          [{ text: t('common.ok') }]
+        );
+      } else if (error.code === 'NETWORK_ERROR') {
+        Alert.alert(
+          t('auth.register_failed'),
+          t('auth.network_error'),
+          [{ text: t('common.ok') }]
+        );
+      } else {
+        Alert.alert(
+          t('auth.register_failed'),
+          error.message || t('auth.register_failed_message'),
+          [{ text: t('common.ok') }]
+        );
+      }
     } finally {
       setIsLoading(false);
     }

@@ -21,6 +21,7 @@ import { notificationService } from '../../services/notificationService';
 import { useActivityNotifications } from '../../hooks/useActivityNotifications';
 import { backgroundTaskService } from '../../services/backgroundTaskService';
 import { LanguageModal } from '../../components/LanguageModal';
+import { DeleteAccountModal } from '../../components/DeleteAccountModal';
 
 interface SettingsScreenProps {
   onLogout: () => void;
@@ -42,6 +43,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   
   const { t, i18n } = useTranslation();
   const { getAllScheduledCount } = useActivityNotifications();
@@ -294,58 +296,32 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
   };
 
   const handleDeleteProfile = () => {
-    Alert.alert(
-      'Delete Profile',
-      '⚠️ WARNING: This action cannot be undone!\n\nThis will permanently delete:\n• Your account\n• All your pets\n• All activity records\n• All data\n\nAre you absolutely sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'I understand, delete everything',
-          style: 'destructive',
-          onPress: () => {
-            // Second confirmation
-            Alert.alert(
-              'Final Confirmation',
-              'This is your last chance to cancel. Type DELETE to confirm permanent deletion.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete Forever',
-                  style: 'destructive',
-                  onPress: async () => {
-                    setIsLoading(true);
-                    try {
-                      // Cancel all scheduled notifications before profile deletion
-                      await notificationService.cancelAllNotifications();
-                      await apiService.deleteProfile();
-                      Alert.alert(
-                        'Profile Deleted',
-                        'Your profile has been permanently deleted.',
-                        [
-                          {
-                            text: 'OK',
-                            onPress: () => onLogout()
-                          }
-                        ]
-                      );
-                    } catch (error) {
-                      console.error('Failed to delete profile:', error);
-                      Alert.alert(
-                        'Deletion Failed',
-                        error instanceof Error ? error.message : 'Failed to delete profile. Please try again.',
-                        [{ text: 'OK' }]
-                      );
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  },
-                },
-              ]
-            );
-          },
-        },
-      ]
-    );
+    setShowDeleteAccountModal(true);
+  };
+
+  const handleConfirmDeleteAccount = async (password: string) => {
+    setIsLoading(true);
+    try {
+      // Cancel all scheduled notifications before profile deletion
+      await notificationService.cancelAllNotifications();
+      await apiService.deleteProfile(password);
+      Alert.alert(
+        'Profile Deleted',
+        'Your profile has been permanently deleted.',
+        [
+          {
+            text: 'OK',
+            onPress: () => onLogout()
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to delete profile:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete profile. Please try again.';
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLanguageChange = (lang: string) => {
@@ -583,6 +559,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onLogout }) => {
             </View>
           </View>
         </Modal>
+
+        {/* Delete Account Modal */}
+        <DeleteAccountModal
+          visible={showDeleteAccountModal}
+          onClose={() => setShowDeleteAccountModal(false)}
+          onConfirm={handleConfirmDeleteAccount}
+        />
       </ScrollView>
     </SafeAreaView>
   );

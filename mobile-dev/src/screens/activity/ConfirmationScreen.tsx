@@ -315,7 +315,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
 
         console.log('Creating activity record with new repeat fields:', activityRecord);
         
-        // Use new repeat service to create all activities
+        // Use new repeat service with hybrid approach to create activities
         const repeatResult = await createActivityWithRepeats(activityRecord);
         
         if (!repeatResult.success) {
@@ -326,6 +326,8 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
         
         // Вычисляем количество виртуальных записей, которые будут показаны
         let virtualCount = 1; // Основная запись
+        let notificationCount = repeatResult.notificationIds.length;
+        
         if (activityData.repeat_type && activityData.repeat_type !== 'none') {
           const baseDate = new Date(activityData.date);
           const { getRepeatDates } = await import('../../utils/repeatHelpers');
@@ -337,16 +339,21 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
             activityData.repeat_count
           );
           virtualCount += repeatDates.length;
+          
+          // Для кастомных интервалов показываем количество созданных уведомлений
+          if (activityData.repeat_interval > 1) {
+            notificationCount = Math.min(7, repeatDates.length); // Максимум 7 уведомлений для кастомных интервалов
+          }
         }
         
-        console.log(`✅ Created 1 activity with repeat fields, will show ${virtualCount} virtual records`);
-        console.log(`📱 Notifications scheduled: ${repeatResult.notificationIds.length}`);
+        console.log(`✅ Created 1 activity with hybrid repeat approach, will show ${virtualCount} virtual records`);
+        console.log(`📱 Notifications scheduled: ${notificationCount} (hybrid approach)`);
         
-        // Notifications are already scheduled by the repeat service
+        // Notifications are already scheduled by the repeat service with hybrid approach
         // No need to schedule them again here
         
         const successMessage = virtualCount > 1 
-          ? `${activityData.title} has been added to your pet's activity log.\n\n📅 Will show ${virtualCount} activities total (including ${virtualCount - 1} repeats).${repeatResult.notificationIds.length > 0 ? `\n\n📱 ${repeatResult.notificationIds.length} reminders have been set!` : ''}${repeatResult.extensionReminderId ? '\n\n⏰ Extension reminder scheduled!' : ''}`
+          ? `${activityData.title} has been added to your pet's activity log.\n\n📅 Will show ${virtualCount} activities total (including ${virtualCount - 1} repeats).${notificationCount > 0 ? `\n\n📱 ${notificationCount} reminders have been set with hybrid approach!` : ''}${repeatResult.extensionReminderId ? '\n\n⏰ Extension reminder scheduled!' : ''}`
           : `${activityData.title} has been added to your pet's activity log.${activityData.notifications ? '\n\n📱 Reminder has been set!' : ''}`;
 
         // Remove Alert.alert and navigate directly after creation

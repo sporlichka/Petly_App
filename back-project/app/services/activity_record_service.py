@@ -199,4 +199,29 @@ class ActivityRecordService:
         except Exception as e:
             db.rollback()
             print(f"Error disabling notifications for user {current_user.id}: {e}")
+            return False
+
+    @staticmethod
+    def delete_all_user_activities(db: Session, user_id: int) -> bool:
+        """Удаление всех записей активности пользователя"""
+        try:
+            # Получаем все питомцы пользователя
+            user_pets = db.query(Pet).filter(Pet.user_id == user_id).all()
+            pet_ids = [pet.id for pet in user_pets]
+            
+            if not pet_ids:
+                # У пользователя нет питомцев, считаем операцию успешной
+                return True
+            
+            # Удаляем все записи активности для питомцев пользователя
+            deleted_count = db.query(ActivityRecord).filter(
+                ActivityRecord.pet_id.in_(pet_ids)
+            ).delete()
+            
+            db.commit()
+            print(f"Deleted {deleted_count} activities for user {user_id}")
+            return True
+        except Exception as e:
+            db.rollback()
+            print(f"Error deleting user activities: {e}")
             return False 

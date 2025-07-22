@@ -183,6 +183,9 @@ export class NotificationService {
           // Clean up expired notifications
           await this.cleanupExpiredNotifications();
           
+          // Обновляем виртуальные уведомления
+          await this.updateVirtualActivityNotifications();
+
           return BackgroundFetch.BackgroundFetchResult.NewData;
         } catch (error) {
           console.error('❌ Background task failed:', error);
@@ -305,6 +308,143 @@ export class NotificationService {
       console.error('❌ Failed to schedule notification:', error);
       return null;
     }
+  }
+
+  /**
+   * Гибридный подход: создает уведомления для виртуальных активностей
+   * - Стандартные повторы: использует встроенные триггеры Expo
+   * - Кастомные интервалы: создает отдельные уведомления для ближайших дат
+   */
+  async scheduleVirtualActivityNotifications(
+    activity: ActivityRecord, 
+    petName?: string
+  ): Promise<string[]> {
+    const notificationIds: string[] = [];
+
+    try {
+      console.log(`🔔 Scheduling virtual activity notifications for activity ${activity.id}`);
+
+      // Если нет повторов, создаем только одно уведомление
+      if (!activity.repeat_type || activity.repeat_type === 'none') {
+        const notificationId = await this.scheduleActivityNotification(activity, petName);
+        if (notificationId) {
+          notificationIds.push(notificationId);
+        }
+        return notificationIds;
+      }
+
+      // Для стандартных повторов (интервал = 1) используем встроенные триггеры
+      if (activity.repeat_interval === 1) {
+        console.log(`📅 Using standard Expo triggers for ${activity.repeat_type} repeats`);
+        const notificationId = await this.scheduleActivityNotification(activity, petName);
+        if (notificationId) {
+          notificationIds.push(notificationId);
+        }
+        return notificationIds;
+      }
+
+      // Для кастомных интервалов создаем отдельные уведомления для ближайших дат
+      console.log(`📅 Creating individual notifications for custom interval ${activity.repeat_interval} ${activity.repeat_type}`);
+      
+      // Импортируем функцию для генерации дат
+      const { getRepeatDates } = await import('../utils/repeatHelpers');
+      
+      const baseDate = new Date(activity.date);
+      const repeatDates = getRepeatDates(
+        baseDate,
+        activity.repeat_type,
+        activity.repeat_interval,
+        activity.repeat_end_date,
+        activity.repeat_count
+      );
+
+      // Создаем уведомления для ближайших 7 дат (или меньше, если повторов меньше)
+      const maxNotifications = Math.min(7, repeatDates.length);
+      const now = new Date();
+
+      for (let i = 0; i < maxNotifications; i++) {
+        const date = repeatDates[i];
+        
+        // Пропускаем даты в прошлом
+        if (date <= now) {
+          continue;
+        }
+
+        try {
+          const virtualActivity: ActivityRecord = {
+            ...activity,
+            id: activity.id + (i + 1) * 1000000, // Виртуальный ID
+            date: this.formatLocalDateTime(date),
+            time: this.formatLocalDateTime(date),
+          };
+
+          const notificationId = await this.scheduleActivityNotification(virtualActivity, petName);
+          if (notificationId) {
+            notificationIds.push(notificationId);
+            console.log(`✅ Scheduled notification ${notificationId} for virtual activity on ${date.toLocaleDateString()}`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to schedule notification for virtual activity ${i + 1}:`, error);
+        }
+      }
+
+      console.log(`🎉 Scheduled ${notificationIds.length} notifications for custom interval activity ${activity.id}`);
+      return notificationIds;
+
+    } catch (error) {
+      console.error('❌ Failed to schedule virtual activity notifications:', error);
+      return notificationIds;
+    }
+  }
+
+  /**
+   * Отменяет все уведомления для виртуальных активностей
+   */
+  async cancelVirtualActivityNotifications(activity: ActivityRecord): Promise<void> {
+    try {
+      console.log(`🗑️ Cancelling virtual activity notifications for activity ${activity.id}`);
+
+      // Отменяем основное уведомление
+      await this.cancelNotificationForActivity(activity.id);
+
+      // Если это кастомный интервал, отменяем виртуальные уведомления
+      if (activity.repeat_type && activity.repeat_type !== 'none' && activity.repeat_interval > 1) {
+        const { getRepeatDates } = await import('../utils/repeatHelpers');
+        
+        const baseDate = new Date(activity.date);
+        const repeatDates = getRepeatDates(
+          baseDate,
+          activity.repeat_type,
+          activity.repeat_interval,
+          activity.repeat_end_date,
+          activity.repeat_count
+        );
+
+        const maxNotifications = Math.min(7, repeatDates.length);
+
+        for (let i = 0; i < maxNotifications; i++) {
+          const virtualActivityId = activity.id + (i + 1) * 1000000;
+          await this.cancelNotificationForActivity(virtualActivityId);
+        }
+
+        console.log(`🗑️ Cancelled ${maxNotifications} virtual activity notifications`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to cancel virtual activity notifications:', error);
+    }
+  }
+
+  /**
+   * Форматирует дату как локальную строку времени
+   */
+  private formatLocalDateTime(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   }
 
   private parseActivityDate(dateString: string): Date {
@@ -854,6 +994,86 @@ export class NotificationService {
     } catch (error) {
       console.error('🧪 Test: Failed to schedule test notification:', error);
       return null;
+    }
+  }
+
+  /**
+   * Обновляет виртуальные уведомления для кастомных интервалов
+   * Вызывается через background task для поддержания актуальности уведомлений
+   */
+  async updateVirtualActivityNotifications(): Promise<void> {
+    // 🌐 Skip for web platform
+    if (Platform.OS === 'web') {
+      console.log('🌐 Skipping virtual notification update for web platform');
+      return;
+    }
+
+    try {
+      console.log('🔄 Updating virtual activity notifications...');
+
+      // Получаем все запланированные уведомления
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      const now = new Date();
+      let updatedCount = 0;
+
+      for (const notification of scheduledNotifications) {
+        const data = notification.content.data;
+        
+        // Проверяем только уведомления для кастомных интервалов
+        if (data?.customInterval && data?.activityId) {
+          const triggerDate = notification.trigger && 'date' in notification.trigger 
+            ? new Date(notification.trigger.date as Date)
+            : null;
+
+          if (triggerDate && triggerDate < now) {
+            console.log(`⚠️ Found expired virtual notification for activity ${data.activityId}`);
+            
+            // Отменяем устаревшее уведомление
+            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+            
+            // Создаем новое уведомление для следующей даты
+            try {
+                             const nextDate = this.calculateNextCustomIntervalDate(
+                 triggerDate,
+                 data.repeatType as string,
+                 data.repeatInterval as number,
+                 data.repeatEndDate as string,
+                 data.repeatCount as number
+               );
+
+              if (nextDate && nextDate > now) {
+                const newNotification: Notifications.NotificationRequestInput = {
+                  content: {
+                    title: notification.content.title,
+                    body: notification.content.body,
+                    data: notification.content.data,
+                    sound: notification.content.sound || 'default',
+                  },
+                  trigger: {
+                    type: Notifications.SchedulableTriggerInputTypes.DATE,
+                    date: nextDate,
+                  },
+                };
+
+                const newNotificationId = await Notifications.scheduleNotificationAsync(newNotification);
+                console.log(`✅ Updated virtual notification ${newNotificationId} for ${nextDate.toLocaleDateString()}`);
+                updatedCount++;
+              }
+            } catch (error) {
+              console.error(`❌ Failed to update virtual notification for activity ${data.activityId}:`, error);
+            }
+          }
+        }
+      }
+
+      if (updatedCount > 0) {
+        console.log(`🔄 Updated ${updatedCount} virtual activity notifications`);
+      } else {
+        console.log('✅ All virtual notifications are up to date');
+      }
+
+    } catch (error) {
+      console.error('❌ Failed to update virtual activity notifications:', error);
     }
   }
 

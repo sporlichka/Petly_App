@@ -79,13 +79,19 @@ export interface User {
   id: number;
   email: string;
   username?: string;
-  // Добавь другие поля по необходимости
+  full_name?: string;
+  is_active: boolean;
+  email_verified?: boolean; // Новое поле для Firebase (опционально)
+  firebase_uid?: string;   // Новое поле для Firebase
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UserCreate {
   email: string;
   password: string;
-  username?: string;
+  username: string; // убираю ? чтобы сделать поле обязательным
+  full_name?: string;
 }
 
 export interface UserLogin {
@@ -96,16 +102,57 @@ export interface UserLogin {
 export interface AuthResponse {
   access_token: string;
   refresh_token: string;
+  token_type: string;
   user: User;
+}
+
+// Новые типы для Firebase авторизации
+export interface FirebaseAuthResponse extends AuthResponse {
+  email_verification_sent?: boolean;
+}
+
+export interface EmailVerificationRequest {
+  email: string;
+}
+
+export interface EmailVerificationResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface EmailVerificationStatus {
+  email: string;
+  email_verified: boolean;
+  firebase_user?: boolean;
+  message?: string;
+}
+
+// Новые типы ошибок авторизации
+export enum AuthErrorType {
+  EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED',
+  VERIFICATION_EXPIRED = 'VERIFICATION_EXPIRED',
+  VERIFICATION_FAILED = 'VERIFICATION_FAILED',
+  INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
+  EMAIL_ALREADY_EXISTS = 'EMAIL_ALREADY_EXISTS',
+  WEAK_PASSWORD = 'WEAK_PASSWORD',
+  NETWORK_ERROR = 'NETWORK_ERROR'
+}
+
+export interface AuthError {
+  type: AuthErrorType;
+  message: string;
+  code?: string;
 }
 
 export interface RefreshTokenRequest {
   refresh_token: string;
+  device_id?: string;
 }
 
 export interface RefreshTokenResponse {
   access_token: string;
   refresh_token?: string;
+  token_type: string;
 }
 
 // --- PETS ---
@@ -175,6 +222,13 @@ export interface ApiError {
 }
 
 // --- Navigation Types ---
+export type AuthStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  EmailVerification: { token: string };
+  EmailVerificationPending: { email: string };
+};
+
 export type HomeStackParamList = {
   PetList: undefined;
   PetDetail: { petId: number };
@@ -247,3 +301,34 @@ export type ActivityStackParamList = {
     fromScreen?: string;
   };
 };
+
+// --- Email Verification Component Types ---
+export interface EmailVerificationCardProps {
+  email: string;
+  status: 'pending' | 'verified' | 'error';
+  onResend: () => void;
+  onCheck: () => void;
+  isLoading?: boolean;
+}
+
+export interface VerificationStatusIndicatorProps {
+  verified: boolean;
+  size?: 'small' | 'medium' | 'large';
+  showText?: boolean;
+}
+
+export interface EmailVerificationScreenProps {
+  email: string;
+  onVerificationComplete: () => void;
+  onResendEmail: () => void;
+  onBackToLogin: () => void;
+}
+
+export interface EmailVerificationPendingScreenProps {
+  email: string;
+  onBackToLogin: () => void;
+  onResendEmail: () => void;
+}
+
+// Экспортируем API типы
+export * from './api';

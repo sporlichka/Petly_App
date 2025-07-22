@@ -43,7 +43,7 @@ interface AddPetScreenProps {
 
 export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation, route }) => {
   const { t, i18n } = useTranslation();
-  const { getSpeciesIcon } = useSpeciesUtils();
+  const { getSpeciesDisplayName, getSpeciesIcon } = useSpeciesUtils();
   const { species, allowSpeciesEdit = false, fromScreen, isOnboarding = false } = route.params || {};
   
   const [formData, setFormData] = useState<PetFormData>({
@@ -60,9 +60,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation, route })
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const getPetEmoji = (species: string) => {
-    return getSpeciesIcon(species);
-  };
+
 
   const validateForm = (): boolean => {
     const newErrors: Partial<PetFormData> = {};
@@ -195,7 +193,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation, route })
           >
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.emoji}>{getPetEmoji(formData.species)}</Text>
+              <Text style={styles.emoji}>{getSpeciesIcon(formData.species)}</Text>
               <Text style={styles.title}>{t('pet_form.add_title')}</Text>
               <Text style={styles.subtitle}>{t('pet_form.add_subtitle')}</Text>
             </View>
@@ -233,7 +231,7 @@ export const AddPetScreen: React.FC<AddPetScreenProps> = ({ navigation, route })
                 >
                   <Ionicons name="paw-outline" size={20} color={Colors.textSecondary} />
                   <Text style={[styles.speciesText, !formData.species && styles.placeholderText]}>
-                    {formData.species || t('pet_form.species_placeholder')}
+                    {formData.species ? getSpeciesDisplayName(formData.species) : t('pet_form.species_placeholder')}
                   </Text>
                   {allowSpeciesEdit && (
                     <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />

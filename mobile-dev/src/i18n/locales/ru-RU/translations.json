@@ -568,7 +568,109 @@
     "register_success": "Регистрация выполнена успешно!",
     "invalid_credentials": "Неверный email или пароль",
     "email_already_exists": "Email уже существует",
-    "network_error": "Ошибка сети. Проверьте подключение."
+    "network_error": "Ошибка сети. Проверьте подключение.",
+    "language": "Язык",
+    "email_verification_title": "Подтвердите ваш email",
+    "email_verification_subtitle": "Мы отправили письмо с подтверждением",
+    "email_verification_instructions": "Нажмите на ссылку в письме для подтверждения вашего email адреса",
+    "email_verification_sent": "Письмо отправлено на {{email}}",
+    "email_verification_resend": "Отправить письмо повторно",
+    "email_verification_check": "Проверить статус",
+    "email_verification_success": "Email подтвержден!",
+    "email_verification_error": "Ошибка подтверждения",
+    "email_verification_pending": "Ожидание подтверждения",
+    "email_verification_expired": "Срок действия ссылки истек",
+    "email_not_verified": "Email не подтвержден",
+    "email_not_verified_message": "Пожалуйста, подтвердите ваш email перед входом",
+    "email_verification_back_to_login": "Вернуться к входу",
+    "email_verification_countdown": "Отправить повторно через {{time}}",
+    "email_verification_auto_check": "Автоматическая проверка каждые 30 секунд",
+    "email_verification_manual_check": "Или нажмите кнопку ниже для проверки",
+    "email_verification_resend_success": "Письмо отправлено повторно",
+    "email_verification_resend_error": "Не удалось отправить письмо повторно",
+    "email_verification_check_success": "Email подтвержден! Можете войти в аккаунт",
+    "email_verification_check_error": "Email еще не подтвержден. Проверьте почту и попробуйте снова",
+    "email_verification_timeout": "Время ожидания истекло. Отправьте письмо повторно",
+    "email_verification_network_error": "Ошибка сети. Проверьте подключение к интернету",
+    "weak_password": "Пароль слишком слабый. Используйте минимум 6 символов",
+    "invalid_credentials": "Неверный email или пароль",
+    "email_already_exists": "Пользователь с таким email уже существует",
+    "network_error": "Ошибка сети. Проверьте подключение к интернету",
+    "verification": {
+      "title": "Подтверждение Email",
+      "pending": {
+        "title": "Подтвердите ваш Email",
+        "subtitle": "Мы отправили письмо с подтверждением на ваш email",
+        "info": "После подтверждения email вы сможете войти в систему"
+      },
+      "success": {
+        "title": "Email подтвержден!",
+        "subtitle": "Теперь вы можете войти в систему",
+        "message": "Ваш email успешно подтвержден",
+        "continue": "Перейти к входу",
+        "continue_title": "Готовы войти в систему"
+      },
+      "error": {
+        "title": "Ошибка подтверждения",
+        "subtitle": "Не удалось подтвердить ваш email",
+        "resend": "Отправить повторно",
+        "backToLogin": "Вернуться к входу",
+        "actions_title": "Что вы хотите сделать?"
+      },
+      "expired": {
+        "title": "Срок действия истек",
+        "subtitle": "Срок действия ссылки подтверждения истек",
+        "message": "Срок действия ссылки подтверждения истек. Запросите новую ссылку.",
+        "resend": "Отправить новую ссылку",
+        "backToLogin": "Вернуться к входу",
+        "actions_title": "Отправить новую ссылку подтверждения"
+      },
+      "tokenError": {
+        "invalid": "Неверная ссылка подтверждения",
+        "expired": "Срок действия ссылки подтверждения истек",
+        "general": "Ошибка при проверке ссылки подтверждения"
+      },
+      "resendSuccess": {
+        "title": "Письмо отправлено",
+        "message": "Новое письмо с подтверждением отправлено на ваш email"
+      },
+      "resendError": {
+        "title": "Ошибка отправки",
+        "message": "Не удалось отправить письмо с подтверждением. Попробуйте еще раз."
+      },
+      "verified": {
+        "title": "Email подтвержден",
+        "message": "Ваш email успешно подтвержден. Теперь вы можете войти в систему."
+      },
+      "notVerified": {
+        "title": "Email не подтвержден",
+        "message": "Ваш email еще не подтвержден. Проверьте почту и перейдите по ссылке."
+      },
+      "checkError": {
+        "title": "Ошибка проверки",
+        "message": "Не удалось проверить статус подтверждения. Попробуйте еще раз."
+      },
+      "resend": "Отправить письмо",
+      "check": "Проверить подтверждение",
+      "backToLogin": "Вернуться к входу",
+      "resending": "Отправка...",
+      "checking": "Проверка...",
+      "verifying": "Проверка токена...",
+      "resendIn": "Отправить через {{seconds}}с",
+      "step1": "Проверьте почтовый ящик {{email}}",
+      "step2": "Нажмите на ссылку подтверждения в письме",
+      "step3": "Вернитесь сюда и проверьте статус",
+      "actions": {
+        "title": "Следующие шаги"
+      },
+      "help": {
+        "title": "Нужна помощь?",
+        "text": "Проверьте папку спам, если не видите письмо. Ссылка подтверждения действительна 24 часа."
+      },
+      "loading": {
+        "info": "Пожалуйста, подождите, пока мы проверяем ваш email адрес..."
+      }
+    }
   },
   "logout_modal": {
     "title": "Выйти",
@@ -618,6 +720,22 @@
     "other_species_title": "Другой вид",
     "other_species_subtitle": "Введите вид вашего питомца",
     "other_species_placeholder": "например, Хорек, Морская свинка, Змея...",
-    "species_required": "Вид обязателен"
+    "species_required": "Вид обязателен",
+    "species_cannot_edit": "Вид нельзя изменить после создания"
+  },
+  "species": {
+    "dog": "Собака",
+    "cat": "Кошка", 
+    "bird": "Птица",
+    "rabbit": "Кролик",
+    "fish": "Рыба",
+    "hamster": "Хомяк",
+    "guinea_pig": "Морская свинка",
+    "ferret": "Хорек",
+    "turtle": "Черепаха",
+    "snake": "Змея",
+    "lizard": "Ящерица",
+    "horse": "Лошадь",
+    "other": "Другое"
   }
 } 

@@ -549,7 +549,109 @@
     "register_failed": "Registration failed. Please try again.",
     "invalid_credentials": "Invalid email or password",
     "email_already_exists": "Email already exists",
-    "network_error": "Network error. Please check your connection."
+    "network_error": "Network error. Please check your connection.",
+    "language": "Language",
+    "email_verification_title": "Verify your email",
+    "email_verification_subtitle": "We sent you a verification email",
+    "email_verification_instructions": "Click the link in the email to verify your email address",
+    "email_verification_sent": "Email sent to {{email}}",
+    "email_verification_resend": "Resend email",
+    "email_verification_check": "Check status",
+    "email_verification_success": "Email verified!",
+    "email_verification_error": "Verification error",
+    "email_verification_pending": "Verification pending",
+    "email_verification_expired": "Verification link expired",
+    "email_not_verified": "Email not verified",
+    "email_not_verified_message": "Please verify your email before signing in",
+    "email_verification_back_to_login": "Back to login",
+    "email_verification_countdown": "Resend in {{time}}",
+    "email_verification_auto_check": "Auto-checking every 30 seconds",
+    "email_verification_manual_check": "Or click the button below to check",
+    "email_verification_resend_success": "Email resent successfully",
+    "email_verification_resend_error": "Failed to resend email",
+    "email_verification_check_success": "Email verified! You can now sign in",
+    "email_verification_check_error": "Email not verified yet. Check your email and try again",
+    "email_verification_timeout": "Verification timeout. Please resend the email",
+    "email_verification_network_error": "Network error. Please check your internet connection",
+    "weak_password": "Password is too weak. Use at least 6 characters",
+    "invalid_credentials": "Invalid email or password",
+    "email_already_exists": "User with this email already exists",
+    "network_error": "Network error. Please check your internet connection",
+    "verification": {
+      "title": "Email Verification",
+      "pending": {
+        "title": "Verify Your Email",
+        "subtitle": "We sent a verification email to your email address",
+        "info": "After verifying your email, you'll be able to sign in"
+      },
+      "success": {
+        "title": "Email Verified!",
+        "subtitle": "You can now sign in to your account",
+        "message": "Your email has been successfully verified",
+        "continue": "Continue to Login",
+        "continue_title": "Ready to Sign In"
+      },
+      "error": {
+        "title": "Verification Error",
+        "subtitle": "Failed to verify your email",
+        "resend": "Resend Verification",
+        "backToLogin": "Back to Login",
+        "actions_title": "What would you like to do?"
+      },
+      "expired": {
+        "title": "Link Expired",
+        "subtitle": "The verification link has expired",
+        "message": "The verification link has expired. Request a new link.",
+        "resend": "Send New Link",
+        "backToLogin": "Back to Login",
+        "actions_title": "Send a new verification link"
+      },
+      "tokenError": {
+        "invalid": "Invalid verification link",
+        "expired": "Verification link has expired",
+        "general": "Error verifying the link"
+      },
+      "resendSuccess": {
+        "title": "Email Sent",
+        "message": "A new verification email has been sent to your email"
+      },
+      "resendError": {
+        "title": "Send Error",
+        "message": "Failed to send verification email. Please try again."
+      },
+      "verified": {
+        "title": "Email Verified",
+        "message": "Your email has been successfully verified. You can now sign in."
+      },
+      "notVerified": {
+        "title": "Email Not Verified",
+        "message": "Your email is not verified yet. Check your email and click the link."
+      },
+      "checkError": {
+        "title": "Check Error",
+        "message": "Failed to check verification status. Please try again."
+      },
+      "resend": "Resend Email",
+      "check": "Check Verification",
+      "backToLogin": "Back to Login",
+      "resending": "Sending...",
+      "checking": "Checking...",
+      "verifying": "Verifying token...",
+      "resendIn": "Resend in {{seconds}}s",
+      "step1": "Check your email inbox for {{email}}",
+      "step2": "Click the verification link in the email",
+      "step3": "Return here and check verification status",
+      "actions": {
+        "title": "Next Steps"
+      },
+      "help": {
+        "title": "Need Help?",
+        "text": "Check your spam folder if you don't see the email. The verification link is valid for 24 hours."
+      },
+      "loading": {
+        "info": "Please wait while we verify your email address..."
+      }
+    }
   },
   "logout_modal": {
     "title": "Logout",
@@ -599,7 +701,23 @@
     "other_species_title": "Other Species",
     "other_species_subtitle": "Enter the species of your pet",
     "other_species_placeholder": "e.g., Ferret, Guinea Pig, Snake...",
-    "species_required": "Species is required"
+    "species_required": "Species is required",
+    "species_cannot_edit": "Species cannot be changed after creation"
+  },
+  "species": {
+    "dog": "Dog",
+    "cat": "Cat", 
+    "bird": "Bird",
+    "rabbit": "Rabbit",
+    "fish": "Fish",
+    "hamster": "Hamster",
+    "guinea_pig": "Guinea Pig",
+    "ferret": "Ferret",
+    "turtle": "Turtle",
+    "snake": "Snake",
+    "lizard": "Lizard",
+    "horse": "Horse",
+    "other": "Other"
   },
   "navigation": {
     "pet_details": "Pet Details",

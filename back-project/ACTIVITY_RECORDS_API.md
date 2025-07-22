@@ -1,273 +1,484 @@
-# API записей активности питомцев (с JWT авторизацией)
+# Activity Records API Documentation
 
-## Обзор
+## Overview
+This document describes the API endpoints for managing activity records in the Vetly application.
 
-Универсальная система записей для управления активностью питомцев с JWT авторизацией. Все эндпоинты защищены и требуют валидный Bearer токен.
-
-## Аутентификация
-
-Все запросы к API должны содержать заголовок авторизации:
-
+## Base URL
 ```
-Authorization: Bearer <your_jwt_token>
+http://localhost:8000
 ```
 
-### Получение токена
+## Authentication
+All endpoints require authentication using Bearer token in the Authorization header:
+```
+Authorization: Bearer <access_token>
+```
 
-**POST** `/auth/login/`
+## Endpoints
 
+### Get All User Activity Records
+```
+GET /records/all-user-pets
+```
+
+Get all activity records for all pets belonging to the authenticated user.
+
+**Query Parameters:**
+- `category` (optional): Filter by activity category
+- `skip` (optional): Number of records to skip (default: 0)
+- `limit` (optional): Maximum number of records to return (default: 1000, max: 1000)
+
+**Response:**
 ```json
-{
-  "email": "user@example.com",
-  "password": "password"
-}
+[
+  {
+    "id": 1,
+    "pet_id": 1,
+    "category": "feeding",
+    "title": "Morning feeding",
+    "date": "2024-01-15",
+    "time": "08:00:00",
+    "notify": true,
+    "notes": "Regular feeding",
+    "food_type": "dry_food",
+    "quantity": 100,
+    "duration": null,
+    "repeat_type": "none",
+    "repeat_interval": null,
+    "repeat_end_date": null,
+    "repeat_count": null,
+    "created_at": "2024-01-15T08:00:00Z",
+    "updated_at": "2024-01-15T08:00:00Z"
+  }
+]
 ```
 
-Ответ:
-```json
-{
-  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-  "token_type": "bearer"
-}
+### Get Activity Records by Date
+```
+GET /records/by-date?date=2024-01-15
 ```
 
-## Модель данных
+Get activity records for a specific date for all pets belonging to the authenticated user.
 
-### ActivityRecord
+**Query Parameters:**
+- `date` (required): Date in YYYY-MM-DD format
+- `category` (optional): Filter by activity category
 
-```python
-class ActivityRecord:
-    id: int                    # Уникальный идентификатор
-    pet_id: int               # ID питомца (внешний ключ)
-    category: ActivityCategory # Категория записи
-    title: str                # Заголовок записи
-    date: datetime            # Дата
-    time: datetime            # Время
-    repeat: str               # Повторение (опционально)
-    notes: str                # Заметки (опционально)
-    food_type: str            # Тип корма (только для feeding)
-    quantity: float           # Количество (только для feeding)
+**Response:** Same as above
+
+### Get Activity Records by Date Range
+```
+GET /records/by-date-range?start_date=2024-01-01&end_date=2024-01-31
 ```
 
-### Категории записей
+Get activity records within a date range for all pets belonging to the authenticated user.
 
-- `feeding` - Кормление
-- `health` - Здоровье
-- `activity` - Активность
+**Query Parameters:**
+- `start_date` (required): Start date in YYYY-MM-DD format
+- `end_date` (required): End date in YYYY-MM-DD format
+- `category` (optional): Filter by activity category
+- `skip` (optional): Number of records to skip (default: 0)
+- `limit` (optional): Maximum number of records to return (default: 1000, max: 1000)
 
-## API Endpoints
+**Response:** Same as above
 
-### 1. Создание записи
+### Create Activity Record
+```
+POST /records/
+```
 
-**POST** `/records/`
+Create a new activity record.
 
-**Заголовки:** `Authorization: Bearer <token>`
-
+**Request Body:**
 ```json
 {
   "pet_id": 1,
   "category": "feeding",
-  "title": "Утреннее кормление",
-  "date": "2025-01-27T10:00:00",
-  "time": "2025-01-27T10:00:00",
-  "repeat": "daily",
-  "notes": "Сухой корм для взрослых кошек",
-  "food_type": "Сухой корм",
-  "quantity": 50.0
+  "title": "Morning feeding",
+  "date": "2024-01-15",
+  "time": "08:00:00",
+  "notify": true,
+  "notes": "Regular feeding",
+  "food_type": "dry_food",
+  "quantity": 100,
+  "duration": null,
+  "repeat_type": "none",
+  "repeat_interval": null,
+  "repeat_end_date": null,
+  "repeat_count": null
 }
 ```
 
-**Ограничения:**
-- Пользователь может создавать записи только для своих питомцев
-- При попытке создать запись для чужого питомца возвращается 403
+**Response:** Created activity record
 
-### 2. Получение записей
+### Get Activity Records by Pet
+```
+GET /records/?pet_id=1
+```
 
-**GET** `/records/?pet_id=1&category=feeding`
+Get activity records for a specific pet.
 
-**Заголовки:** `Authorization: Bearer <token>`
+**Query Parameters:**
+- `pet_id` (required): ID of the pet
+- `category` (optional): Filter by activity category
+- `skip` (optional): Number of records to skip (default: 0)
+- `limit` (optional): Maximum number of records to return (default: 100, max: 1000)
 
-Параметры:
-- `pet_id` (обязательный) - ID питомца
-- `category` (опциональный) - Фильтр по категории
-- `skip` (опциональный) - Количество записей для пропуска
-- `limit` (опциональный) - Максимальное количество записей
+**Response:** Same as above
 
-**Ограничения:**
-- Пользователь может получать записи только для своих питомцев
-- Если питомец не принадлежит пользователю, возвращается пустой список
+### Disable All Notifications
+```
+PATCH /records/disable-all-notifications
+```
 
-### 3. Получение конкретной записи
+Disable notifications for all activities belonging to the authenticated user.
 
-**GET** `/records/{record_id}`
-
-**Заголовки:** `Authorization: Bearer <token>`
-
-**Ограничения:**
-- Пользователь может получить только записи своих питомцев
-- При попытке доступа к чужой записи возвращается 403
-
-### 4. Обновление записи
-
-**PUT** `/records/{record_id}`
-
-**Заголовки:** `Authorization: Bearer <token>`
-
+**Response:**
 ```json
 {
-  "title": "Обновленный заголовок",
-  "notes": "Обновленные заметки"
+  "message": "All notifications disabled successfully"
 }
 ```
 
-**Ограничения:**
-- Пользователь может обновлять только записи своих питомцев
-- При попытке обновить чужую запись возвращается 403
+### Get Activity Record by ID
+```
+GET /records/{record_id}
+```
 
-### 5. Удаление записи
+Get a specific activity record by ID.
 
-**DELETE** `/records/{record_id}`
+**Path Parameters:**
+- `record_id` (required): ID of the activity record
 
-**Заголовки:** `Authorization: Bearer <token>`
+**Response:** Single activity record
 
-**Ограничения:**
-- Пользователь может удалять только записи своих питомцев
-- При попытке удалить чужую запись возвращается 403
+### Update Activity Record
+```
+PATCH /records/{record_id}
+```
 
-## Коды ответов
+Partially update an activity record.
 
-- `200` - Успешная операция
-- `401` - Неавторизованный доступ (неверный или отсутствующий токен)
-- `403` - Доступ запрещен (попытка доступа к чужим данным)
-- `404` - Ресурс не найден
-- `422` - Ошибка валидации данных
+**Path Parameters:**
+- `record_id` (required): ID of the activity record
 
-## Примеры использования
+**Request Body:** Partial update with any fields from the create request
 
-### Создание записи кормления
+**Response:** Updated activity record
 
-```python
-import requests
+### Delete Activity Record
+```
+DELETE /records/{record_id}
+```
 
-# Получение токена
-login_response = requests.post("http://localhost:8000/auth/login/", json={
-    "email": "user@example.com",
-    "password": "password"
-})
-token = login_response.json()["access_token"]
-headers = {"Authorization": f"Bearer {token}"}
+Delete an activity record.
 
-# Создание записи
-feeding_record = {
-    "pet_id": 1,
-    "category": "feeding",
-    "title": "Утреннее кормление",
-    "date": "2025-01-27T10:00:00",
-    "time": "2025-01-27T10:00:00",
-    "repeat": "daily",
-    "notes": "Сухой корм для взрослых кошек",
-    "food_type": "Сухой корм",
-    "quantity": 50.0
+**Path Parameters:**
+- `record_id` (required): ID of the activity record
+
+**Response:**
+```json
+{
+  "message": "Запись успешно удалена"
 }
-
-response = requests.post("http://localhost:8000/records/", json=feeding_record, headers=headers)
 ```
 
-### Создание записи здоровья
+## Activity Categories
+- `feeding`: Feeding activities
+- `walking`: Walking activities
+- `grooming`: Grooming activities
+- `medical`: Medical activities
+- `training`: Training activities
+- `care`: General care activities
 
-```python
-health_record = {
-    "pet_id": 1,
-    "category": "health",
-    "title": "Прививка от бешенства",
-    "date": "2025-02-27T14:00:00",
-    "time": "2025-02-27T14:00:00",
-    "repeat": "yearly",
-    "notes": "Следующая прививка через 1 год"
+## Food Types
+- `dry_food`: Dry food
+- `wet_food`: Wet food
+- `treats`: Treats
+- `supplements`: Supplements
+- `water`: Water
+- `other`: Other food types
+
+## Repeat Types
+- `none`: No repetition
+- `daily`: Daily repetition
+- `weekly`: Weekly repetition
+- `monthly`: Monthly repetition
+- `custom`: Custom repetition
+
+## Error Responses
+
+### 400 Bad Request
+```json
+{
+  "detail": "Start date must be before or equal to end date"
 }
-
-response = requests.post("http://localhost:8000/records/", json=health_record, headers=headers)
 ```
 
-### Создание записи активности
-
-```python
-activity_record = {
-    "pet_id": 1,
-    "category": "activity",
-    "title": "Прогулка в парке",
-    "date": "2025-01-27T16:00:00",
-    "time": "2025-01-27T16:00:00",
-    "repeat": "daily",
-    "notes": "30 минут активной игры"
+### 401 Unauthorized
+```json
+{
+  "detail": "Could not validate credentials"
 }
-
-response = requests.post("http://localhost:8000/records/", json=activity_record, headers=headers)
 ```
 
-### Получение всех записей кормления для питомца
-
-```python
-response = requests.get("http://localhost:8000/records/?pet_id=1&category=feeding", headers=headers)
-records = response.json()
+### 403 Forbidden
+```json
+{
+  "detail": "Access denied or record not found"
+}
 ```
 
-## Безопасность
-
-### Проверки авторизации
-
-1. **Создание записей:** Проверяется, что питомец принадлежит текущему пользователю
-2. **Получение записей:** Фильтрация по владельцу питомца
-3. **Обновление/удаление:** Проверка прав доступа к конкретной записи
-4. **Все операции:** Валидация JWT токена
-
-### Принципы безопасности
-
-- Пользователи могут работать только со своими данными
-- Все запросы требуют валидный JWT токен
-- Автоматическая фильтрация по владельцу питомца
-- Защита от несанкционированного доступа к чужим записям
-
-## Миграция базы данных
-
-Для применения изменений в базе данных выполните:
-
-```bash
-cd back-project
-docker-compose run --rm backend alembic upgrade head
+### 500 Internal Server Error
+```json
+{
+  "detail": "Internal server error"
+}
 ```
 
-## Тестирование
+# Authentication API Documentation
 
-Запустите тестовый скрипт:
+## Overview
+This document describes the authentication API endpoints for the Vetly application.
 
-```bash
-cd back-project
-python test_activity_records.py
+## Base URL
+```
+http://localhost:8000
 ```
 
-**Примечание:** Перед запуском тестов убедитесь, что:
-1. У вас есть тестовый пользователь в базе данных
-2. У пользователя есть питомец с ID 1
-3. Обновите данные пользователя в скрипте (`email` и `password`)
+## Endpoints
 
-## Структура проекта
-
+### Firebase Status Check
 ```
-back-project/
-├── app/
-│   ├── models/
-│   │   └── activity_record.py      # Модель ActivityRecord
-│   ├── schemas/
-│   │   └── activity_record.py      # Pydantic схемы
-│   ├── services/
-│   │   └── activity_record_service.py  # Бизнес-логика с проверками авторизации
-│   ├── auth/
-│   │   ├── deps.py                 # JWT зависимости
-│   │   └── jwt.py                  # JWT утилиты
-│   └── routers/
-│       └── activity_records.py     # API маршруты с авторизацией
-├── app/db/migrations/versions/
-│   └── add_activity_records_table.py  # Миграция
-└── test_activity_records.py        # Тестовый скрипт с JWT
-``` 
+GET /auth/firebase/status
+```
+
+Check the status of Firebase initialization.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Firebase initialized successfully",
+  "project_id": "your-project-id"
+}
+```
+
+### Check Email Verification Status
+```
+GET /auth/verify-email-status/{email}
+```
+
+Check if a user's email is verified.
+
+**Path Parameters:**
+- `email` (required): Email address to check
+
+**Response:**
+```json
+{
+  "email": "user@example.com",
+  "firebase_user": true,
+  "email_verified": true,
+  "message": "Email verified"
+}
+```
+
+### Register User
+```
+POST /auth/register
+```
+
+Register a new user with Firebase integration and email verification.
+
+**Request Body:**
+```json
+{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "password": "securepassword",
+  "full_name": "John Doe"
+}
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "refresh_token": "refresh_token_here",
+  "user": {
+    "id": 1,
+    "username": "johndoe",
+    "email": "john@example.com",
+    "full_name": "John Doe",
+    "is_active": true,
+    "firebase_uid": "firebase_uid_here"
+  }
+}
+```
+
+### Login User
+```
+POST /auth/login
+```
+
+Login with username/email and password.
+
+**Request Body (form data):**
+```
+username: johndoe
+password: securepassword
+```
+
+**Response:** Same as register response
+
+### Refresh Token
+```
+POST /auth/refresh
+```
+
+Refresh access token using refresh token.
+
+**Request Body:**
+```json
+{
+  "refresh_token": "refresh_token_here"
+}
+```
+
+**Response:**
+```json
+{
+  "access_token": "new_access_token_here",
+  "token_type": "bearer"
+}
+```
+
+### Resend Verification Email
+```
+POST /auth/resend-verification/{email}
+```
+
+Resend email verification for a user.
+
+**Path Parameters:**
+- `email` (required): Email address
+
+**Request Body:**
+```json
+{
+  "password": "user_password"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Verification email sent successfully",
+  "email": "user@example.com"
+}
+```
+
+### Change Password
+```
+POST /auth/change-password
+```
+
+Change user password (requires authentication).
+
+**Request Body:**
+```json
+{
+  "current_password": "old_password",
+  "new_password": "new_secure_password"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Password changed successfully. Please log in again with your new password.",
+  "user_id": 1
+}
+```
+
+### Delete Account
+```
+DELETE /auth/delete-account
+```
+
+Permanently delete user account and all associated data (requires authentication).
+
+**Request Body:**
+```json
+{
+  "password": "user_password",
+  "confirm_deletion": true
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Account and all associated data deleted successfully",
+  "user_id": 1,
+  "email": "user@example.com"
+}
+```
+
+## Error Responses
+
+### 400 Bad Request
+```json
+{
+  "detail": "New password must be different from current password"
+}
+```
+
+### 401 Unauthorized
+```json
+{
+  "detail": "Incorrect password"
+}
+```
+
+### 404 Not Found
+```json
+{
+  "detail": "User not found"
+}
+```
+
+### 500 Internal Server Error
+```json
+{
+  "detail": "Failed to change password"
+}
+```
+
+## Security Notes
+
+1. **Password Requirements:**
+   - Minimum 6 characters
+   - Must be different from current password
+
+2. **Account Deletion:**
+   - Requires password confirmation
+   - Requires explicit confirmation flag
+   - Permanently deletes all user data including:
+     - User profile
+     - All pets
+     - All activity records
+     - All refresh tokens
+     - Firebase user account
+
+3. **Token Management:**
+   - Access tokens expire and need refresh
+   - Refresh tokens are invalidated on password change
+   - All refresh tokens are deleted on account deletion
+
+4. **Firebase Integration:**
+   - New users are created in both local DB and Firebase
+   - Email verification is handled through Firebase
+   - Password changes are synchronized with Firebase
+   - Account deletion removes data from both systems 
